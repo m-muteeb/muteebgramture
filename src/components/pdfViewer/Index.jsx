@@ -1,58 +1,77 @@
 // src/components/PdfViewer.js
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Worker, Viewer } from "@react-pdf-viewer/core";
 import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
-import { Card } from "antd";
-import * as pdfjs from "pdfjs-dist/build/pdf"; // ✅ Correct Import
+import { Card, Spin } from "antd";
+import * as pdfjs from "pdfjs-dist/build/pdf";
+import workerSrc from "pdfjs-dist/build/pdf.worker.entry";
 
-// ✅ Set the correct worker version dynamically
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// ✅ Set PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
-const Preview = () => {
+const PdfViewer = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const fileUrl = queryParams.get("url");
   const fileTitle = queryParams.get("title") || "File Preview";
-  console.log("fileUrl value:", fileUrl);
-console.log("fileUrl typeof:", typeof fileUrl);
 
-
-  if (!fileUrl) {
-    return <h3 className="text-center text-danger">Invalid File URL</h3>;
-  }
-
-  let fileType = "";
-
-  if (typeof fileUrl === "string") {
-    fileType = fileUrl.split("?")[0].split(".").pop().toLowerCase();
-    console.log("File Type:", fileType);
-  } else {
-    console.error("fileUrl is not a string:", fileUrl);
-  }
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [pdfBlob, setPdfBlob] = useState(null);
 
   const pdfPlugin = defaultLayoutPlugin();
 
+  useEffect(() => {
+    if (!fileUrl) return;
+
+    const fetchPdf = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(fileUrl);
+        if (!response.ok) throw new Error("Failed to fetch PDF");
+
+        const blob = await response.blob();
+        setPdfBlob(blob);
+        setLoading(false);
+      } catch (err) {
+        console.error("PDF fetch error:", err);
+        setError("Failed to load PDF. Make sure the file exists.");
+        setLoading(false);
+      }
+    };
+
+    fetchPdf();
+  }, [fileUrl]);
+
+  if (!fileUrl) return <h3 className="text-center text-danger">Invalid File URL</h3>;
+  if (error) return <h3 className="text-center text-danger">{error}</h3>;
+
   return (
-    <div className="preview-container">
-      <Card title={fileTitle} bordered={true} className="preview-card">
-        <p className="file-description">
-          This is a preview of <strong>{fileTitle}</strong>. You can view the document below.
+    <div style={{ padding: "20px", maxWidth: "900px", margin: "0 auto" }}>
+      <Card title={fileTitle} bordered>
+        <p>
+          This is a preview of <strong>{fileTitle}</strong>.
         </p>
 
-        {fileType === "pdf" ? (
-          <Worker workerUrl={pdfjs.GlobalWorkerOptions.workerSrc}>
-            <Viewer fileUrl={fileUrl} plugins={[pdfPlugin]} />
+        {loading && (
+          <div className="text-center" style={{ margin: "20px 0" }}>
+            <Spin size="large" tip="Loading PDF..." />
+          </div>
+        )}
+
+        {pdfBlob && (
+          <Worker workerUrl={workerSrc}>
+            <Viewer fileUrl={pdfBlob} plugins={[pdfPlugin]} />
           </Worker>
-        ) : (
-          <h3 className="text-center text-warning">File format not supported.</h3>
         )}
       </Card>
     </div>
   );
 };
 
-
-export default Preview;
+export default PdfViewer;

@@ -2,34 +2,24 @@ import React from 'react';
 import { message } from 'antd';
 import { FaShareAlt } from 'react-icons/fa';
 
-
 const ShareArticle = () => {
   const handleShare = () => {
     if (typeof window !== 'undefined' && window.location) {
       const url = window.location.href;
-      
-      // Check for mobile sharing using the Web Share API
+
       if (navigator.share) {
         navigator
           .share({
             title: 'Check out this article!',
             url,
           })
-          .then(() => {
-            message.success('Article shared successfully!');
-          })
-          .catch((error) => {
-            console.error('Error sharing:', error);
-            // If mobile share fails, fallback to copying link
-            copyLinkToClipboard(url);
-          });
+          .then(() => message.success('Article shared successfully!'))
+          .catch(() => copyLinkToClipboard(url));
       } else {
-        // If Web Share API is not available (desktop or unsupported mobile browser)
         copyLinkToClipboard(url);
       }
     } else {
       message.error('Unable to get the current URL.');
-      console.error('window.location is not available.');
     }
   };
 
@@ -37,26 +27,47 @@ const ShareArticle = () => {
     if (navigator.clipboard) {
       navigator.clipboard
         .writeText(url)
-        .then(() => {
-          message.success('Link copied to clipboard!');
-        })
-        .catch((error) => {
-          message.error('Failed to copy the link.');
-          console.error(error);
-        });
+        .then(() => message.success('Link copied to clipboard!'))
+        .catch(() => message.error('Failed to copy the link.'));
     } else {
-      // Fallback for devices/browsers that don’t support clipboard API
-      message.warning('Clipboard API not supported. Try using a desktop browser.');
+      message.warning('Clipboard API not supported. Try a desktop browser.');
     }
   };
 
   return (
-    <div className="share-article-container">
-      <button onClick={handleShare} className="share-button">
-        <FaShareAlt /> Share Article
+    <div style={styles.container}>
+      <button style={styles.button} onClick={handleShare}>
+        <FaShareAlt style={{ marginRight: '8px' }} /> Share Article
       </button>
     </div>
   );
+};
+
+const styles = {
+  container: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: '40px 0', // spacing from top and bottom
+  },
+  button: {
+    display: 'flex',
+    alignItems: 'center',
+    background: 'linear-gradient(135deg, #1d72b8, #3399ff)',
+    color: '#fff',
+    fontSize: '1rem',
+    fontWeight: '600',
+    padding: '12px 25px',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
+    transition: 'all 0.3s ease',
+  },
+  buttonHover: {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+  },
 };
 
 export default ShareArticle;

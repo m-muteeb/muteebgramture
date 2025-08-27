@@ -13,6 +13,7 @@
     "bootstrap": "^5.3.6",
     "cra-templates": "^0.1.0",
     "firebase": "^11.8.1",
+    "framer-motion": "^12.23.12",
     "html2canvas": "^1.4.1",
     "jodit-react": "^5.2.19",
     "pdfjs-dist": "^3.4.120",

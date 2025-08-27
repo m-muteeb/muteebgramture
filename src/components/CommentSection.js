@@ -179,10 +179,10 @@ const CommentSection = ({ subCategory, topicId }) => {
             value={newComment.name}
             onChange={handleCommentChange}
             placeholder="Your Name"
-            className="comment-input form-control"
+            className="comment-input form-control mt-3"
           />
         </div>
-        <div className="col-12 col-md-6 col-lg-4">
+        <div className="col-12 col-md-6 col-lg-4 mt-3">
           <input
             type="email"
             name="email"
@@ -192,7 +192,7 @@ const CommentSection = ({ subCategory, topicId }) => {
             className="comment-input form-control"
           />
         </div>
-        <div className="col-12">
+        <div className="col-12 mt-3">
           <textarea
             name="comment"
             value={newComment.comment}
@@ -201,7 +201,7 @@ const CommentSection = ({ subCategory, topicId }) => {
             className="comment-textarea form-control"
           />
         </div>
-        <div className="col-12">
+        <div className="col-12 mt-3">
           <button
             onClick={handleSubmitComment}
             className="btn btn-primary btn-block"
