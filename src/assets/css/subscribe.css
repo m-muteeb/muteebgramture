@@ -1,0 +1,131 @@
+/* Centered container with margin */
+.newsletter-wrapper {
+  max-width: 1100px;
+  margin: 60px auto;
+  padding: 0 20px;
+}
+
+.newsletter-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f3f8fe; /* light blue background */
+  border-radius: 50px;
+  padding: 40px 60px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.newsletter-text {
+  flex: 1;
+  min-width: 260px;
+}
+
+.newsletter-text h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #000;
+  margin: 0;
+}
+
+.newsletter-text p {
+  font-size: 14px;
+  color: #5b5b5b;
+  margin-top: 10px;
+}
+
+.newsletter-input {
+  background-color: #2647f9; /* bright blue background */
+  border-radius: 40px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  width: 400px;
+  max-width: 100%;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  flex: 1;
+  min-width: 260px;
+}
+
+.newsletter-input input {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 30px;
+  outline: none;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.newsletter-input button {
+  background-color: white;
+  color: #2647f9;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 10px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.newsletter-input button:hover {
+  background-color: #e6e6e6;
+}
+
+/* Media Queries for Responsiveness */
+@media (max-width: 768px) {
+  .newsletter-container {
+    flex-direction: column;
+    padding: 30px 20px;
+    border-radius: 30px;
+  }
+
+  .newsletter-text h2 {
+    font-size: 22px;
+    text-align: center;
+  }
+
+  .newsletter-text p {
+    text-align: center;
+    font-size: 13px;
+  }
+
+  .newsletter-input {
+    width: 100%;
+    margin-top: 20px;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px;
+    border-radius: 20px;
+    background-color: #2647f9;
+  }
+
+  .newsletter-input input {
+    padding: 10px 15px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+
+  .newsletter-input button {
+    margin-left: 0;
+    border-radius: 20px;
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .newsletter-text h2 {
+    font-size: 20px;
+  }
+
+  .newsletter-input input,
+  .newsletter-input button {
+    font-size: 13px;
+  }
+}

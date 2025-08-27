@@ -1,0 +1,123 @@
+.featured-section {
+  padding: 4rem 2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.featured-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.top-text-center {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.heading-wrapper h2 {
+  font: 2em sans-serif;
+  font-weight: bold;
+}
+
+.section-heading {
+  font-size: 28px;
+  font-weight: bold;
+  text-align: center;
+  display: inline-block;
+}
+
+.gradient-underline.full-width {
+  height: 4px;
+  width: 100%;
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+  border-radius: 10px;
+  margin-top: 0.5rem;
+}
+
+.description {
+  font-size: 1.2rem;
+  color: #555;
+  line-height: 1.6;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.horizontal-card-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: center;
+}
+
+.class-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 213px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-align: center;
+}
+
+.class-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.class-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto 1rem auto;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.class-card h3 {
+  font-size: 1.4rem;
+  color: #34495e;
+  margin-bottom: 0.8rem;
+}
+
+.class-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.class-card ul li {
+  padding: 0.3rem 0;
+  font-size: 1rem;
+  color: #666;
+  border-bottom: 1px solid #eee;
+}
+
+.class-card ul li:last-child {
+  border-bottom: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .horizontal-card-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .class-card {
+    width: 100%;
+    max-width: 350px;
+  }
+}
+.recent-section {
+  margin-top: 5rem;
+  text-align: center;
+}
+
+.recent-placeholder {
+  padding: 40px;
+  margin-top: 20px;
+  border: 2px dashed #ccc;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  color: #777;
+  background-color: #fafafa;
+}

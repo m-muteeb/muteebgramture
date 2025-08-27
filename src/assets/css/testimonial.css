@@ -1,0 +1,143 @@
+.testimonial-section {
+  padding: 60px 20px;
+}
+
+.testimonial-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.testimonial-header h2 {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.testimonial-header .sub-text {
+  font-size: 1.1rem;
+  color: #666;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.heading-wrapper h2 {
+  font: 2.5em sans-serif;
+  font-weight: bold;
+}
+
+.testimonial-flex-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 30px;
+}
+
+.side-img {
+  flex: 1 1 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.side-img img {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  border-radius: 16px;
+  object-fit: contain;
+}
+
+.testimonial-content {
+  flex: 2 1 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+}
+
+.testimonial-box {
+  background: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.05);
+  max-width: 700px;
+  width: 100%;
+  text-align: left;
+  transition: box-shadow 0.3s ease;
+}
+
+.testimonial-box:hover {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.testimonial-box h4 {
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+  color: #222;
+}
+
+.testimonial-box p {
+  font-size: 1rem;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* Smooth transition effect */
+.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.4s ease-in-out;
+}
+
+.fade-out {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.4s ease-in-out;
+}
+
+.dots {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  justify-content: center;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ccc;
+  transition: background 0.3s ease;
+  cursor: pointer;
+}
+
+.dot.active {
+  background: #007bff;
+}
+
+/* Responsive Styles */
+@media (max-width: 992px) {
+  .testimonial-flex-wrapper {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .side-img img {
+    max-width: 160px;
+  }
+
+  .testimonial-box {
+    padding: 25px;
+    text-align: center;
+  }
+
+  .testimonial-box h4 {
+    font-size: 1.3rem;
+  }
+
+  .testimonial-box p {
+    font-size: 1rem;
+  }
+}

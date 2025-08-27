@@ -1,0 +1,150 @@
+/* General Section Styling */
+.about-sect {
+  width: 100%;
+  padding: 2rem 1rem;
+  margin: 0 auto;
+  max-width: 1200px;
+  display: block;
+}
+
+.section-container {
+  margin-bottom: 60px;
+}
+
+/* Highlight Text */
+.highlight {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+/* Welcome Section */
+.gramture-desc p {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+
+/* CEO Message Styling */
+.ceo-message p {
+  font-size: 1rem;
+  color: #444;
+  line-height: 1.7;
+  margin-bottom: 15px;
+}
+
+/* Social Icons */
+.social-icons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.social-icons a {
+  font-size: 22px;
+  transition: transform 0.3s ease;
+}
+.social-icons a.facebook { color: #3b5998; }
+.social-icons a.twitter { color: #1da1f2; }
+.social-icons a.instagram { color: #e1306c; }
+.social-icons a.youtube { color: #ff0000; }
+.social-icons a.whatsapp { color: #25d366; }
+
+.social-icons a:hover {
+  transform: scale(1.2);
+}
+
+/* Feature Cards */
+.feature-card {
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  height: 100%;
+  padding: 25px;
+  
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+}
+
+.feature-card h5 {
+  font-size: 1.15rem;
+  margin-bottom: 15px;
+}
+
+.feature-card p {
+  font-size: 0.95rem;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.feature-card .btn {
+  background-color: #007bff;
+  border: none;
+  color: white;
+  padding: 8px 20px;
+}
+
+.feature-card .btn:hover {
+  background-color: #0056b3;
+}
+
+/* Image Styling */
+.about-image {
+  border-radius: 8px;
+  width: 100%;
+  height: auto;
+  max-width: 400px;
+  margin: 0 auto;
+  display: block;
+}
+
+.ceo-image {
+  border-radius: 8px;
+  width: 230px;
+  height: 230px;
+  object-fit: cover;
+  margin: 0 auto 20px;
+  display: block;
+}
+
+/* Headings */
+.section-title {
+  font-weight: 700;
+  margin-bottom: 30px;
+  text-align: center;
+  color: #2c3e50;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .about-section {
+    padding: 30px 15px;
+  }
+  
+  .section-container {
+    margin-bottom: 40px;
+  }
+  
+  .social-icons {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-title {
+    font-size: 1.5rem;
+  }
+  
+  .feature-card {
+    padding: 20px;
+  }
+  
+  .social-icons a {
+    font-size: 20px;
+  }
+}

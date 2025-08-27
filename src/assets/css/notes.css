@@ -1,0 +1,176 @@
+/* 1. Notes container with extra bottom padding */
+.notes-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 20px 250px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 2. Subject grid layout */
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+/* 3. Card appearance */
+.subject-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  overflow: visible; /* Changed from hidden to visible */
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  position: relative; /* Add position relative */
+}
+
+.subject-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  border-color: #007bff;
+}
+
+.subject-card.active {
+  border-color: #007bff;
+}
+
+/* 4. Header of card */
+.subject-header {
+  padding: 16px 20px;
+  font-size: 18px;
+  font-weight: 600;
+  background-color: #f1f3f5;
+  color: #343a40;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+  border-radius: 12px 12px 0 0;
+}
+
+.subject-header:hover {
+  background-color: #e9ecef;
+}
+
+/* 5. Dropdown styling - COMPLETELY NEW APPROACH */
+.dropdown-container {
+  position: relative;
+  background-color: #ffffff;
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  opacity: 0;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+}
+
+.dropdown-container.visible {
+  transform: scaleY(1);
+  opacity: 1;
+  border-top: 1px solid #e9ecef;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* Scrollbar styling */
+.dropdown-container::-webkit-scrollbar {
+  width: 8px;
+}
+.dropdown-container::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 6px;
+}
+.dropdown-container::-webkit-scrollbar-thumb:hover {
+  background-color: #999;
+}
+.dropdown-container::-webkit-scrollbar-track {
+  background-color: #f9f9f9;
+}
+
+/* 6. Dropdown inner content */
+.dropdown-content {
+  padding: 20px;
+  background-color: #ffffff;
+}
+
+/* 7. Topic grid */
+.topics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+/* 8. Topic item */
+.topic-item {
+  background: #ffffff;
+  border: 1px solid #dee2e6;
+  padding: 12px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  color: #343a40;
+  transition: 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  word-wrap: break-word;
+}
+
+.topic-item:hover {
+  background: #f1f9ff;
+  color: #007bff;
+  border-color: #007bff;
+  transform: translateY(-1px);
+}
+
+/* 9. Loading and fallback messages */
+.loading,
+.no-topics {
+  padding: 20px 0;
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+}
+
+/* 10. Responsive layout */
+@media (max-width: 768px) {
+  .subjects-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dropdown-container.visible {
+    max-height: 50vh;
+  }
+  
+  .subject-header {
+    font-size: 16px;
+    padding: 14px 16px;
+  }
+
+  .topic-item {
+    font-size: 14px;
+    padding: 10px;
+  }
+  
+  .topics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Alternative approach using height transition if transform doesn't work */
+.dropdown-container-alt {
+  background-color: #ffffff;
+  height: 0;
+  overflow: hidden;
+  transition: height 0.4s ease-in-out, padding 0.4s ease-in-out;
+  border-radius: 0 0 12px 12px;
+}
+
+.dropdown-container-alt.visible {
+  height: auto;
+  min-height: 100px;
+  max-height: 60vh;
+  overflow-y: auto;
+  border-top: 1px solid #e9ecef;
+  padding-top: 1px;
+}
