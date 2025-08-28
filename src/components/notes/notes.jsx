@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { fireStore } from "../../config/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
 
+// 🔹 Normalize for case-insensitive matching
 const normalize = (str) =>
-  str.toLowerCase().replace(/\s+/g, " ").trim(); // Normalize casing and spacing
+  str.toLowerCase().replace(/\s+/g, " ").trim();
+
+// 🔹 Shared slugify helper
+const slugify = (str) =>
+  str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 
 const Notes = () => {
   const { selectedClass, subCategory } = useParams();
@@ -17,13 +26,18 @@ const Notes = () => {
   const [fetchedOnce, setFetchedOnce] = useState(false);
 
   // Hardcoded categories
-  const grammarOnly = ["Letters", "Stories", "Applications", "Translations" ,"Condtitional Sentences" , "Tenses", "MCQ Test" , "Idioms","Direct & Indirect"];
-  const commonHardcoded = [
-    "Past Papers",
-    "Guess Paper",
-    "Book Lessons",
+  const grammarOnly = [
+    "Letters",
+    "Stories",
+    "Applications",
+    "Translations",
+    "Condtitional Sentences",
+    "Tenses",
     "MCQ Test",
+    "Idioms",
+    "Direct & Indirect",
   ];
+  const commonHardcoded = ["Past Papers", "Guess Paper", "Book Lessons", "MCQ Test"];
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -37,7 +51,7 @@ const Notes = () => {
       );
       if (index !== -1) {
         setOpenSubCatId(index);
-        fetchTopics(subCategory);
+        subscribeToTopics(subCategory); // ✅ Live updates
       }
     }
   }, [subCategory, subCategories]);
@@ -46,12 +60,10 @@ const Notes = () => {
   const fetchSubCategories = async () => {
     try {
       if (normalize(selectedClass) === "grammar") {
-        // Grammar has only its own hardcoded subs
         setSubCategories(grammarOnly);
         return;
       }
 
-      // For other classes
       setSubCategories(commonHardcoded);
 
       if (!fetchedOnce) {
@@ -60,10 +72,8 @@ const Notes = () => {
         const snapshot = await getDocs(collection(fireStore, "subcategories"));
         let subs = snapshot.docs.map((doc) => doc.data().name);
 
-        // Remove grammar-related ones
         subs = subs.filter((name) => !grammarOnly.includes(name));
 
-        // Append fetched to hardcoded
         setSubCategories((prev) => [...prev, ...subs]);
 
         setFetchedOnce(true);
@@ -75,52 +85,63 @@ const Notes = () => {
     }
   };
 
-  // 🔹 Fetch topics
-  const fetchTopics = async (subCatName) => {
+  // 🔹 Subscribe to topics in realtime
+  const subscribeToTopics = (subCatName) => {
     setLoading(true);
-    try {
-      let q;
 
-      if (normalize(selectedClass) === "grammar") {
-        // Grammar case: query with class = "grammar"
-        q = query(
-          collection(fireStore, "topics"),
-          where("class", "==", "grammar"),
-          where("subCategory", "==", subCatName)
-        );
-      } else {
-        // Normal classes
-        q = query(
-          collection(fireStore, "topics"),
-          where("class", "==", `Class ${selectedClass}`),
-          where("subCategory", "==", subCatName)
-        );
-      }
-
-      const snapshot = await getDocs(q);
-      const topicData = {};
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.topic) topicData[normalize(data.topic)] = data;
-      });
-
-      const sortedKeys = Object.keys(topicData).sort((a, b) => {
-        const numA = parseInt(a.match(/^\d+/)?.[0]);
-        const numB = parseInt(b.match(/^\d+/)?.[0]);
-        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-        return a.localeCompare(b);
-      });
-
-      const sortedTopics = {};
-      sortedKeys.forEach((key) => {
-        sortedTopics[key] = topicData[key];
-      });
-
-      setTopics(sortedTopics);
-    } catch (error) {
-      console.error("Error fetching topics:", error);
+    let q;
+    if (normalize(selectedClass) === "grammar") {
+      q = query(
+        collection(fireStore, "topics"),
+        where("class", "==", "grammar"),
+        where("subCategory", "==", subCatName)
+      );
+    } else {
+      q = query(
+        collection(fireStore, "topics"),
+        where("class", "==", `Class ${selectedClass}`),
+        where("subCategory", "==", subCatName)
+      );
     }
-    setLoading(false);
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const topicData = {};
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.topic) {
+            const key = normalize(data.topic);
+            topicData[key] = {
+              ...data,
+              slug: data.slug || slugify(data.topic),
+            };
+          }
+        });
+
+        // Sort topics
+        const sortedKeys = Object.keys(topicData).sort((a, b) => {
+          const numA = parseInt(a.match(/^\d+/)?.[0]);
+          const numB = parseInt(b.match(/^\d+/)?.[0]);
+          if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+          return a.localeCompare(b);
+        });
+
+        const sortedTopics = {};
+        sortedKeys.forEach((key) => {
+          sortedTopics[key] = topicData[key];
+        });
+
+        setTopics(sortedTopics);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching topics:", error);
+        setLoading(false);
+      }
+    );
+
+    return unsubscribe; // ✅ Cleanup if needed
   };
 
   // 🔹 Handle subcategory click
@@ -129,7 +150,7 @@ const Notes = () => {
     setOpenSubCatId(newOpenId);
 
     if (newOpenId !== null) {
-      fetchTopics(subCatName);
+      subscribeToTopics(subCatName);
       navigate(`/notes/${selectedClass}/${subCatName}`);
     } else {
       setTopics({});
@@ -145,25 +166,11 @@ const Notes = () => {
   };
 
   // 🔹 Handle topic click
-  const handleTopicClick = (topicName) => {
-    const cleanTopicName = topicName.trim();
-    const normalizedKey = normalize(cleanTopicName);
-    const fileData = topics[normalizedKey];
+  const handleTopicClick = (topicKey) => {
+    const fileData = topics[topicKey];
+    if (!fileData) return;
 
-    if (!fileData) {
-      console.warn("Topic name mismatch!", {
-        clicked: cleanTopicName,
-        available: Object.keys(topics),
-      });
-      return;
-    }
-
-    const topicSlug = cleanTopicName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "");
-
+    const topicSlug = fileData.slug;
     const currentSubCategory = subCategories[openSubCatId];
 
     navigate(

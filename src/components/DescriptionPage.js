@@ -1,8 +1,8 @@
+// src/components/Description.js
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { message, Spin } from "antd";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
-import { Document, Page, pdfjs } from "react-pdf";
 
 import CommentSection from "./CommentSection";
 import ShareArticle from "./ShareArticle";
@@ -18,32 +18,24 @@ import {
 
 import "../assets/css/description.css";
 
-// Setup PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-
 export default function Description() {
   const { subCategory, topicSlug } = useParams();
-  const navigate = useNavigate();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [allTopics, setAllTopics] = useState([]);
   const [currentTopicIndex, setCurrentTopicIndex] = useState(null);
-  const [numPages, setNumPages] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        // Fetch selected topic
         const productsList = await fetchProducts(subCategory, topicSlug);
         setProducts(productsList);
         setLoading(false);
 
-        // Fetch all topics for navigation
         const topicsList = await fetchAllTopics(subCategory);
         setAllTopics(topicsList);
 
-        // Find current topic index
         const currentTopicIdx = topicsList.findIndex(
           (topic) => topic.id === topicSlug || topic.slug === topicSlug
         );
@@ -55,8 +47,11 @@ export default function Description() {
     })();
   }, [subCategory, topicSlug]);
 
-  const onDocumentLoadSuccess = ({ numPages }) => {
-    setNumPages(numPages);
+  // Convert Google Drive link to preview URL
+  const getDrivePreviewUrl = (url) => {
+    if (!url) return null;
+    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)\//);
+    return match ? `https://drive.google.com/file/d/${match[1]}/preview` : url;
   };
 
   return (
@@ -72,13 +67,16 @@ export default function Description() {
           <title>Gramture - {products[0].topic}</title>
           <meta
             name="description"
-            content={extractTextFromHTML(products[0].description).substring(0, 150)}
+            content={extractTextFromHTML(products[0].description).substring(
+              0,
+              150
+            )}
           />
 
-          {/* Topic Title */}
+          {/* Title */}
           <h1 className="topic-title">{products[0].topic}</h1>
 
-          {/* Description Section */}
+          {/* Description */}
           {products.map((product) => (
             <article key={product.id} className="product-article">
               <div
@@ -88,35 +86,35 @@ export default function Description() {
             </article>
           ))}
 
-          {/* PDF Viewer */}
-          <Document
-            file={products[0].notesFile}
-            onLoadSuccess={onDocumentLoadSuccess}
-            loading={<Spin size="large" tip="Loading PDF..." />}
-            error={<div className="text-red-500">Failed to load PDF</div>}
-          >
-            {Array.from({ length: numPages }, (_, index) => (
-              <Page
-                key={`page_${index + 1}`}
-                pageNumber={index + 1}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
+          {/* ✅ Google Drive PDF Embed */}
+          {products[0].notesFile && (
+            <div className="pdf-viewer mt-4">
+              <iframe
+                src={getDrivePreviewUrl(products[0].notesFile)}
+                width="100%"
+                height="600px"
+                allow="autoplay"
+                title="Notes PDF"
+                style={{ border: "none" }}
               />
-            ))}
-          </Document>
+            </div>
+          )}
 
-          {/* MCQ Section */}
+          {/* MCQs */}
           <MCQList subCategory={subCategory} topicSlug={topicSlug} />
 
-          {/* Share Buttons */}
+          {/* Share */}
           <ShareArticle />
 
-          {/* Previous / Next Navigation */}
+          {/* Navigation */}
           <div className="topic-navigation">
             {getPrevTopic(allTopics, currentTopicIndex) &&
-              getPrevTopic(allTopics, currentTopicIndex).subCategory === subCategory && (
+              getPrevTopic(allTopics, currentTopicIndex).subCategory ===
+                subCategory && (
                 <Link
-                  to={`/description/${subCategory}/${getPrevTopic(allTopics, currentTopicIndex).slug}`}
+                  to={`/description/${subCategory}/${
+                    getPrevTopic(allTopics, currentTopicIndex).slug
+                  }`}
                   className="prev-button"
                   onClick={() => window.scrollTo(0, 0)}
                 >
@@ -126,9 +124,12 @@ export default function Description() {
               )}
 
             {getNextTopic(allTopics, currentTopicIndex) &&
-              getNextTopic(allTopics, currentTopicIndex).subCategory === subCategory && (
+              getNextTopic(allTopics, currentTopicIndex).subCategory ===
+                subCategory && (
                 <Link
-                  to={`/description/${subCategory}/${getNextTopic(allTopics, currentTopicIndex).slug}`}
+                  to={`/description/${subCategory}/${
+                    getNextTopic(allTopics, currentTopicIndex).slug
+                  }`}
                   className="next-button"
                   onClick={() => window.scrollTo(0, 0)}
                 >
@@ -138,7 +139,7 @@ export default function Description() {
               )}
           </div>
 
-          {/* Comments Section */}
+          {/* Comments */}
           <CommentSection subCategory={subCategory} topicId={products[0]?.id} />
         </>
       )}

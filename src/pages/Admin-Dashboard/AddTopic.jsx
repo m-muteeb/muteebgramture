@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   Form,
@@ -54,83 +51,51 @@ const AddContent = () => {
 
   const [form] = Form.useForm();
 
-  // useEffect(() => {
-  //   const fetchClasses = async () => {
-  //     const querySnapshot = await getDocs(collection(fireStore, "classes"));
-  //     const fetchedClasses = querySnapshot.docs.map((doc) => ({
-  //       id: doc.id,
-  //       name: doc.data().name,
-  //     }));
-  //     setClasses(fetchedClasses);
-
-      
-
-  //     const draft = JSON.parse(localStorage.getItem("draft"));
-  //     if (draft) {
-  //       setDescription(draft.description || "");
-  //       form.setFieldsValue(draft);
-  //       if (draft.mcqs) {
-  //         setMcqs(draft.mcqs);
-  //         setIsMCQ(true);
-  //       }
-  //       if (draft.featuredImage) {
-  //         setFeaturedImage(draft.featuredImage);
-  //       }
-  //     }
-  //   };
-
-  //   fetchClasses();
-  // }, [form]);
-
-
-
   useEffect(() => {
-  const fetchData = async () => {
-    try {
-      // Fetch classes
-      const classSnapshot = await getDocs(collection(fireStore, "classes"));
-      const fetchedClasses = classSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name,
-      }));
-      setClasses(fetchedClasses);
+    const fetchData = async () => {
+      try {
+        // Fetch classes
+        const classSnapshot = await getDocs(collection(fireStore, "classes"));
+        const fetchedClasses = classSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.data().name,
+        }));
+        setClasses(fetchedClasses);
 
-      // ✅ Fetch subcategories
-      const subCatSnapshot = await getDocs(collection(fireStore, "subcategories"));
-      const fetchedSubCategories = subCatSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name,
-      }));
-      setSubCategories(fetchedSubCategories);
+        // ✅ Fetch subcategories
+        const subCatSnapshot = await getDocs(collection(fireStore, "subcategories"));
+        const fetchedSubCategories = subCatSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.data().name,
+        }));
+        setSubCategories(fetchedSubCategories);
 
-      // Load draft from localStorage
-      const draft = JSON.parse(localStorage.getItem("draft"));
-      if (draft) {
-        setDescription(draft.description || "");
-        form.setFieldsValue(draft);
-        if (draft.mcqs) {
-          setMcqs(draft.mcqs);
-          setIsMCQ(true);
+        // Load draft from localStorage
+        const draft = JSON.parse(localStorage.getItem("draft"));
+        if (draft) {
+          setDescription(draft.description || "");
+          form.setFieldsValue(draft);
+          if (draft.mcqs) {
+            setMcqs(draft.mcqs);
+            setIsMCQ(true);
+          }
+          if (draft.featuredImage) {
+            setFeaturedImage(draft.featuredImage);
+          }
         }
-        if (draft.featuredImage) {
-          setFeaturedImage(draft.featuredImage);
-        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        message.error("Failed to load initial data.");
       }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      message.error("Failed to load initial data.");
-    }
-  };
+    };
 
-  fetchData();
-}, [form]);
+    fetchData();
+  }, [form]);
 
-
-  const uploadFeaturedImage = async (file) => {
-    setImageUploading(true);
+  const uploadFileToFirebase = async (file, path) => {
     try {
-      const uniqueFileName = `${Date.now()}-${file.name}`;
-      const storageRef = ref(storage, `featured-images/${uniqueFileName}`);
+      const uniqueFileName = `${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+      const storageRef = ref(storage, `${path}/${uniqueFileName}`);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
       return new Promise((resolve, reject) => {
@@ -138,18 +103,28 @@ const AddContent = () => {
           "state_changed",
           null,
           (error) => {
-            console.error("Image upload failed:", error);
-            message.error("Featured image upload failed.", 3);
+            console.error("File upload failed:", error);
             reject(error);
           },
           async () => {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            setFeaturedImage(downloadURL);
-            message.success("Featured image uploaded successfully!", 3);
             resolve(downloadURL);
           }
         );
       });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      throw error;
+    }
+  };
+
+  const uploadFeaturedImage = async (file) => {
+    setImageUploading(true);
+    try {
+      const downloadURL = await uploadFileToFirebase(file, "featured-images");
+      setFeaturedImage(downloadURL);
+      message.success("Featured image uploaded successfully!", 3);
+      return downloadURL;
     } catch (error) {
       console.error("Error uploading featured image:", error);
       message.error("Error uploading featured image", 3);
@@ -162,27 +137,10 @@ const AddContent = () => {
   const uploadNoteFile = async (file) => {
     setNoteUploading(true);
     try {
-      const sanitizedName = file.name.replace(/\s+/g, "-");
-      const uniqueFileName = `${Date.now()}-${sanitizedName}`;
-      const storageRef = ref(storage, `note-files/${uniqueFileName}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      return new Promise((resolve, reject) => {
-        uploadTask.on(
-          "state_changed",
-          null,
-          (error) => {
-            message.error("Note file upload failed");
-            reject(error);
-          },
-          async () => {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            setNoteFile(downloadURL);
-            message.success("Note file uploaded!");
-            resolve(downloadURL);
-          }
-        );
-      });
+      const downloadURL = await uploadFileToFirebase(file, "note-files");
+      setNoteFile(downloadURL);
+      message.success("Note file uploaded!");
+      return downloadURL;
     } catch (error) {
       console.error("Upload error:", error);
       message.error("PDF upload failed");
@@ -217,7 +175,7 @@ const AddContent = () => {
       await addDoc(collection(fireStore, "topics"), topicData);
       message.success("Topic created successfully!", 3);
       localStorage.removeItem("draft");
-      navigate("/ManageProducts");
+      navigate("/Managecontent");
     } catch (e) {
       console.error("Error adding document:", e);
       message.error("Failed to save topic.", 3);
@@ -433,6 +391,26 @@ const AddContent = () => {
     ));
   };
 
+  // Custom image upload handler for Jodit
+  const handleImageUpload = (editor, file) => {
+    return new Promise((resolve, reject) => {
+      message.loading('Uploading image...', 0);
+      
+      uploadFileToFirebase(file, 'editor-images')
+        .then(downloadURL => {
+          message.destroy();
+          message.success('Image uploaded successfully!');
+          resolve(downloadURL);
+        })
+        .catch(error => {
+          message.destroy();
+          message.error('Image upload failed');
+          console.error('Image upload error:', error);
+          reject(error);
+        });
+    });
+  };
+
   const joditConfig = {
     readonly: false,
     height: 300,
@@ -479,37 +457,32 @@ const AddContent = () => {
     ],
     uploader: {
       insertImageAsBase64URI: false,
-      url: "/api/upload",
+      url: false,
       format: "json",
       imagesExtensions: ["jpg", "png", "jpeg", "gif"],
       filesVariableName: "files",
       withCredentials: false,
-      prepareData: (data) => {
-        const formData = new FormData();
-        Object.keys(data).forEach((key) => {
-          formData.append(key, data[key]);
-        });
-        return formData;
-      },
-      isSuccess: (resp) => resp.success,
-      getMessage: (resp) => resp.message,
+      isSuccess: (resp) => true,
+      getMessage: (resp) => "",
       process: (resp) => ({
-        files: resp.files || [],
-        path: resp.path || "",
-        baseurl: resp.baseurl || "",
-        error: resp.error || 0,
-        message: resp.message || "",
+        files: [resp] || [],
+        path: "",
+        baseurl: "",
+        error: 0,
+        message: "",
       }),
-      error: (e) => {
-        console.error("Upload error:", e);
-        message.error("Image upload failed");
-      },
       defaultHandlerSuccess: (data) => {
-        const { files } = data;
-        if (files && files.length) {
-          return files[0];
+        if (data && data.files && data.files.length) {
+          return data.files[0];
         }
         return "";
+      },
+      prepareData: function (formData) {
+        return formData;
+      },
+      error: (e) => {
+        console.error("Upload error:", e);
+        message.error("File upload failed");
       },
     },
     imageDefaultWidth: 300,
@@ -523,6 +496,51 @@ const AddContent = () => {
     askBeforePasteFromWord: true,
     allowTabNavigtion: false,
     placeholder: "Type your content here...",
+    
+    // Custom image upload handler
+    image: {
+      dialog: {
+        tabs: {
+          'Upload': {
+            fields: {
+              file: {
+                name: 'file',
+                label: 'Upload image from computer',
+                type: 'file',
+                accept: 'image/*',
+                required: true
+              }
+            }
+          },
+          'URL': {
+            fields: {
+              url: {
+                name: 'url',
+                label: 'URL',
+                type: 'text',
+                required: true
+              }
+            }
+          }
+        }
+      },
+      
+      upload: async (file) => {
+        try {
+          const url = await handleImageUpload(null, file);
+          return { files: [url], isImages: [true] };
+        } catch (error) {
+          throw new Error('Upload failed');
+        }
+      },
+      
+      insert: function (url, alt, styles) {
+        const image = this.selection.j.createInside.element('img');
+        image.setAttribute('src', url);
+        image.setAttribute('alt', alt || '');
+        this.s.insertNode(image);
+      }
+    }
   };
 
   const mcqJoditConfig = {
@@ -544,7 +562,7 @@ const AddContent = () => {
     return isImage && isLt5M;
   };
 
-  const handleImageUpload = async (options) => {
+  const handleFeaturedImageUpload = async (options) => {
     const { file } = options;
     try {
       const url = await uploadFeaturedImage(file);
@@ -573,7 +591,7 @@ const AddContent = () => {
               name="featuredImage"
               multiple={false}
               beforeUpload={beforeImageUpload}
-              customRequest={handleImageUpload}
+              customRequest={handleFeaturedImageUpload}
               showUploadList={false}
               accept="image/*"
             >
@@ -665,36 +683,35 @@ const AddContent = () => {
             rules={[{ required: false, message: "Please select a category!" }]}
           >
             <Select
-  placeholder="Select category"
-  dropdownRender={(menu) => (
-    <>
-      {menu}
-      <div style={{ display: "flex", padding: 8 }}>
-        <Input
-          style={{ flex: "auto" }}
-          placeholder="Add new category"
-          value={newCategory}
-          onChange={(e) => setNewCategory(e.target.value)}
-          onPressEnter={handleAddCategory}
-        />
-        <Button
-          type="primary"
-          icon={addingCategory ? <LoadingOutlined /> : <PlusOutlined />}
-          onClick={handleAddCategory}
-        >
-          {addingCategory ? "Adding..." : "Add"}
-        </Button>
-      </div>
-    </>
-  )}
->
-  {categories.map((cat) => (
-    <Option key={cat.id} value={cat.name}>
-      {cat.name}
-    </Option>
-  ))}
-</Select>
-
+              placeholder="Select category"
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  <div style={{ display: "flex", padding: 8 }}>
+                    <Input
+                      style={{ flex: "auto" }}
+                      placeholder="Add new category"
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                      onPressEnter={handleAddCategory}
+                    />
+                    <Button
+                      type="primary"
+                      icon={addingCategory ? <LoadingOutlined /> : <PlusOutlined />}
+                      onClick={handleAddCategory}
+                    >
+                      {addingCategory ? "Adding..." : "Add"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            >
+              {categories.map((cat) => (
+                <Option key={cat.id} value={cat.name}>
+                  {cat.name}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item
@@ -705,38 +722,37 @@ const AddContent = () => {
             ]}
           >
             <Select
-  placeholder="Select subcategory"
-  dropdownRender={(menu) => (
-    <>
-      {menu}
-      <div style={{ display: "flex", padding: 8 }}>
-        <Input
-          style={{ flex: "auto" }}
-          placeholder="Add new subcategory"
-          value={newSubCategory}
-          onChange={(e) => setNewSubCategory(e.target.value)}
-          onPressEnter={handleAddSubCategory}
-        />
-        <Button
-          type="primary"
-          icon={
-            addingSubCategory ? <LoadingOutlined /> : <PlusOutlined />
-          }
-          onClick={handleAddSubCategory}
-        >
-          {addingSubCategory ? "Adding..." : "Add"}
-        </Button>
-      </div>
-    </>
-  )}
->
-  {subCategories.map((sub) => (
-    <Option key={sub.id} value={sub.name}>
-      {sub.name}
-    </Option>
-  ))}
-</Select>
-
+              placeholder="Select subcategory"
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  <div style={{ display: "flex", padding: 8 }}>
+                    <Input
+                      style={{ flex: "auto" }}
+                      placeholder="Add new subcategory"
+                      value={newSubCategory}
+                      onChange={(e) => setNewSubCategory(e.target.value)}
+                      onPressEnter={handleAddSubCategory}
+                    />
+                    <Button
+                      type="primary"
+                      icon={
+                        addingSubCategory ? <LoadingOutlined /> : <PlusOutlined />
+                      }
+                      onClick={handleAddSubCategory}
+                    >
+                      {addingSubCategory ? "Adding..." : "Add"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            >
+              {subCategories.map((sub) => (
+                <Option key={sub.id} value={sub.name}>
+                  {sub.name}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item label="Attach Notes">

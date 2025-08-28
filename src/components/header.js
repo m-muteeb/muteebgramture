@@ -131,15 +131,9 @@ export default function Header() {
 
           <Link to="/contact" onClick={handleLinkClick}>Contact Us</Link>
 
-          {!user ? (
-            <Link to="/auth/login" onClick={handleLinkClick}>
-              <button className="sign-in-btn">Sign Up</button>
+                    <Link to="/gramturestore">
+              <button className="sign-in-btn">Gramture Store</button>
             </Link>
-          ) : (
-            <button onClick={handleLogout} className="sign-in-btn">
-              Logout
-            </button>
-          )}
         </div>
       )}
     </header>

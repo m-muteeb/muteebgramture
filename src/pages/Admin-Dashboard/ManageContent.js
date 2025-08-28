@@ -1,11 +1,48 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Table, Button, Popconfirm, message, Modal, Form, Input, Select, Row, Col, Upload, Image } from 'antd';
-import { EditOutlined, DeleteOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons';
-import { collection, getDocs, deleteDoc, doc, updateDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import {
+  Table,
+  Button,
+  Popconfirm,
+  message,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Row,
+  Col,
+  Upload,
+  Image,
+  Switch,
+  Card
+} from 'antd';
+import {
+  EditOutlined,
+  DeleteOutlined,
+  UploadOutlined,
+  PlusOutlined,
+  MinusOutlined
+} from '@ant-design/icons';
+import {
+  collection,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc,
+  query,
+  orderBy,
+  serverTimestamp,
+} from 'firebase/firestore';
 import { fireStore, storage } from '../../config/firebase';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import {
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject,
+} from 'firebase/storage';
 import JoditEditor from 'jodit-react';
 import { debounce } from 'lodash';
+
+const { Option } = Select;
 
 const ManageProducts = () => {
   const [products, setProducts] = useState([]);
@@ -16,11 +53,14 @@ const ManageProducts = () => {
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [classes, setClasses] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
   const [mcqs, setMcqs] = useState([]);
   const [featuredImage, setFeaturedImage] = useState(null);
   const [imageUploading, setImageUploading] = useState(false);
   const [notesFile, setNotesFile] = useState(null);
   const [notesUploading, setNotesUploading] = useState(false);
+  const [isMCQ, setIsMCQ] = useState(false);
   const editor = useRef(null);
 
   const debouncedDescriptionChange = useRef(
@@ -32,6 +72,8 @@ const ManageProducts = () => {
   useEffect(() => {
     fetchProducts();
     fetchClasses();
+    fetchCategories();
+    fetchSubCategories();
   }, []);
 
   const fetchClasses = async () => {
@@ -45,6 +87,32 @@ const ManageProducts = () => {
     } catch (error) {
       message.error('Failed to fetch classes.');
       console.error(error);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(fireStore, 'categories'));
+      const categoryList = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setCategories(categoryList);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
+  };
+
+  const fetchSubCategories = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(fireStore, 'subcategories'));
+      const subCategoryList = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setSubCategories(subCategoryList);
+    } catch (error) {
+      console.error('Failed to fetch subcategories:', error);
     }
   };
 
@@ -66,9 +134,33 @@ const ManageProducts = () => {
   const handleDelete = async (id) => {
     setDeleting(true);
     try {
+      const productToDelete = products.find((p) => p.id === id);
+
+      // Delete featured image if exists
+      if (productToDelete?.featuredImage) {
+        try {
+          const imgRef = ref(storage, productToDelete.featuredImage);
+          await deleteObject(imgRef);
+        } catch (err) {
+          console.warn('No featured image or already deleted:', err.message);
+        }
+      }
+
+      // Delete notes file if exists
+      if (productToDelete?.notesFile) {
+        try {
+          const notesRef = ref(storage, productToDelete.notesFile);
+          await deleteObject(notesRef);
+        } catch (err) {
+          console.warn('No notes file or already deleted:', err.message);
+        }
+      }
+
+      // Delete Firestore document
       await deleteDoc(doc(fireStore, 'topics', id));
-      message.success('Product deleted successfully!');
+
       setProducts((prev) => prev.filter((product) => product.id !== id));
+      message.success('Product and associated files deleted successfully!');
     } catch (error) {
       message.error('Failed to delete product.');
       console.error(error);
@@ -81,63 +173,70 @@ const ManageProducts = () => {
     setEditingProduct(record);
     setDescription(record.description || '');
     setMcqs(record.mcqs || []);
+    setIsMCQ(record.mcqs && record.mcqs.length > 0);
     setFeaturedImage(record.featuredImage || null);
     setNotesFile(record.notesFile || null);
+    
+    // Parse class string back to array if it's stored as comma-separated
+    const classArray = record.class ? record.class.split(',').map(c => c.trim()) : [];
+    
     form.setFieldsValue({
       topic: record.topic,
-      class: record.class,
-      subCategory: record.subCategory,
+      class: classArray,
+      category: record.category || '',
+      subCategory: record.subCategory || '',
     });
     setIsModalVisible(true);
   };
 
   const handleModalClose = () => {
     setIsModalVisible(false);
+    setEditingProduct(null);
     setDescription('');
     setMcqs([]);
+    setIsMCQ(false);
     setFeaturedImage(null);
     setNotesFile(null);
     form.resetFields();
     setLoading(false);
   };
 
-  const uploadFeaturedImage = async (file) => {
-    setImageUploading(true);
+  const uploadFileToFirebase = async (file, path) => {
     try {
-      if (featuredImage) {
-        try {
-          const oldImageRef = ref(storage, featuredImage);
-          await deleteObject(oldImageRef);
-        } catch (error) {
-          console.error('Error deleting old image:', error);
-        }
-      }
-
-      const uniqueFileName = `${Date.now()}-${file.name}`;
-      const storageRef = ref(storage, `featured-images/${uniqueFileName}`);
+      const uniqueFileName = `${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+      const storageRef = ref(storage, `${path}/${uniqueFileName}`);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
       return new Promise((resolve, reject) => {
         uploadTask.on(
-          'state_changed',
+          "state_changed",
           null,
           (error) => {
-            console.error('Image upload failed:', error);
-            message.error('Featured image upload failed.', 3);
+            console.error("File upload failed:", error);
             reject(error);
           },
           async () => {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            setFeaturedImage(downloadURL);
-            message.success('Featured image uploaded successfully!', 3);
             resolve(downloadURL);
           }
         );
       });
     } catch (error) {
-      console.error('Error uploading featured image:', error);
-      message.error('Error uploading featured image', 3);
-      return null;
+      console.error("Error uploading file:", error);
+      throw error;
+    }
+  };
+
+  const uploadFeaturedImage = async (file) => {
+    setImageUploading(true);
+    try {
+      const downloadURL = await uploadFileToFirebase(file, "featured-images");
+      setFeaturedImage(downloadURL);
+      message.success('Featured image uploaded!');
+      return downloadURL;
+    } catch (error) {
+      message.error('Featured image upload failed.');
+      throw error;
     } finally {
       setImageUploading(false);
     }
@@ -146,40 +245,13 @@ const ManageProducts = () => {
   const uploadNotesFile = async (file) => {
     setNotesUploading(true);
     try {
-      if (notesFile) {
-        try {
-          const oldNotesRef = ref(storage, notesFile);
-          await deleteObject(oldNotesRef);
-        } catch (error) {
-          console.error('Error deleting old notes file:', error);
-        }
-      }
-
-      const uniqueFileName = `${Date.now()}-${file.name}`;
-      const storageRef = ref(storage, `notes-files/${uniqueFileName}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      return new Promise((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          null,
-          (error) => {
-            console.error('Notes file upload failed:', error);
-            message.error('Notes file upload failed.', 3);
-            reject(error);
-          },
-          async () => {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            setNotesFile(downloadURL);
-            message.success('Notes file uploaded successfully!', 3);
-            resolve(downloadURL);
-          }
-        );
-      });
+      const downloadURL = await uploadFileToFirebase(file, "notes-files");
+      setNotesFile(downloadURL);
+      message.success('Notes file uploaded!');
+      return downloadURL;
     } catch (error) {
-      console.error('Error uploading notes file:', error);
-      message.error('Error uploading notes file', 3);
-      return null;
+      message.error('Notes file upload failed.');
+      throw error;
     } finally {
       setNotesUploading(false);
     }
@@ -188,31 +260,19 @@ const ManageProducts = () => {
   const handleImageUpload = async (options) => {
     const { file } = options;
     try {
-      const url = await uploadFeaturedImage(file);
-      return url;
+      await uploadFeaturedImage(file);
     } catch (error) {
-      console.error('Image upload error:', error);
-      return null;
+      console.error("Image upload error:", error);
     }
   };
 
   const handleNotesUpload = async (options) => {
     const { file } = options;
     try {
-      const url = await uploadNotesFile(file);
-      return url;
+      await uploadNotesFile(file);
     } catch (error) {
-      console.error('Notes upload error:', error);
-      return null;
+      console.error("Notes upload error:", error);
     }
-  };
-
-  const handleRemoveImage = () => {
-    setFeaturedImage(null);
-  };
-
-  const handleRemoveNotes = () => {
-    setNotesFile(null);
   };
 
   const handleUpdate = async (values) => {
@@ -220,14 +280,14 @@ const ManageProducts = () => {
     try {
       const updatedValues = {
         ...values,
+        class: Array.isArray(values.class) ? values.class.join(", ") : values.class,
         description,
-        mcqs,
+        mcqs: isMCQ ? mcqs : [],
         featuredImage,
         notesFile,
-        status: 'published',
         timestamp: serverTimestamp(),
       };
-
+      
       await updateDoc(doc(fireStore, 'topics', editingProduct.id), updatedValues);
       message.success('Product updated successfully!');
       handleModalClose();
@@ -235,481 +295,365 @@ const ManageProducts = () => {
     } catch (error) {
       message.error('Failed to update product.');
       console.error(error);
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveDraft = async () => {
-    setLoading(true);
-    try {
-      const values = await form.validateFields();
-      const updatedValues = {
-        ...values,
-        description,
-        mcqs,
-        featuredImage,
-        notesFile,
-        status: 'draft',
-        timestamp: serverTimestamp(),
-      };
-
-      await updateDoc(doc(fireStore, 'topics', editingProduct.id), updatedValues);
-      message.success('Product saved as draft successfully!');
-      handleModalClose();
-      fetchProducts();
-    } catch (error) {
-      message.error('Failed to save as draft.');
-      console.error(error);
-      setLoading(false);
-    }
-  };
-
-  const handleMCQChange = (index, field, value) => {
+  const handleMCQChange = (index, key, value) => {
     const updatedMcqs = [...mcqs];
-    updatedMcqs[index][field] = value;
+    updatedMcqs[index][key] = value;
+    setMcqs(updatedMcqs);
+  };
+
+  const handleOptionChange = (mcqIndex, optionIndex, value) => {
+    const updatedMcqs = [...mcqs];
+    updatedMcqs[mcqIndex].options[optionIndex] = value;
+    setMcqs(updatedMcqs);
+  };
+
+  const handleCorrectAnswerChange = (mcqIndex, value) => {
+    const updatedMcqs = [...mcqs];
+    updatedMcqs[mcqIndex].correctAnswer = value;
     setMcqs(updatedMcqs);
   };
 
   const handleAddMCQ = () => {
     setMcqs([
       ...mcqs,
-      { question: '', options: ['', '', '', ''], correctAnswer: '', logic: '' },
+      { question: "", options: ["", "", "", ""], correctAnswer: "", logic: "" },
     ]);
   };
 
-  const handleDeleteMCQ = (index) => {
-    const updatedMcqs = mcqs.filter((_, idx) => idx !== index);
-    setMcqs(updatedMcqs);
+  const handleRemoveMCQ = (index) => {
+    if (mcqs.length > 1) {
+      const updatedMcqs = [...mcqs];
+      updatedMcqs.splice(index, 1);
+      setMcqs(updatedMcqs);
+    } else {
+      message.warning("At least one MCQ is required");
+    }
+  };
+
+  const renderMCQTemplate = () => {
+    return mcqs.map((mcq, index) => (
+      <Card
+        key={index}
+        style={{ marginBottom: 16, border: "1px solid #f0f0f0" }}
+        size="small"
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h4>MCQ {index + 1}</h4>
+          <Button
+            type="link"
+            danger
+            icon={<MinusOutlined />}
+            onClick={() => handleRemoveMCQ(index)}
+            disabled={mcqs.length <= 1}
+          >
+            Remove
+          </Button>
+        </div>
+        
+        <Form.Item label="Question" required>
+          <JoditEditor
+            value={mcq.question}
+            config={mcqJoditConfig}
+            onChange={(newContent) => handleMCQChange(index, "question", newContent)}
+          />
+        </Form.Item>
+        
+        <Form.Item label="Options" required>
+          {mcq.options.map((option, optionIndex) => (
+            <div key={optionIndex} style={{ marginBottom: 8 }}>
+              <Input
+                addonBefore={
+                  <input
+                    type="radio"
+                    name={`correct-${index}`}
+                    checked={mcq.correctAnswer === option}
+                    onChange={() => handleCorrectAnswerChange(index, option)}
+                  />
+                }
+                value={option}
+                onChange={(e) => handleOptionChange(index, optionIndex, e.target.value)}
+                placeholder={`Option ${optionIndex + 1}`}
+              />
+            </div>
+          ))}
+        </Form.Item>
+        
+        <Form.Item label="Logic for Correct Answer (Optional)">
+          <JoditEditor
+            value={mcq.logic}
+            config={mcqJoditConfig}
+            onChange={(newContent) => handleMCQChange(index, "logic", newContent)}
+          />
+        </Form.Item>
+      </Card>
+    ));
+  };
+
+  const joditConfig = {
+    readonly: false,
+    height: 300,
+    buttons: [
+      "source", "|", "bold", "italic", "underline", "strikethrough", "|",
+      "ul", "ol", "|", "font", "fontsize", "brush", "paragraph", "|",
+      "align", "outdent", "indent", "|", "cut", "copy", "paste", "copyformat", "|",
+      "hr", "table", "link", "|", "undo", "redo", "|", "preview", "print",
+      "find", "fullsize", "image", "video", "file"
+    ],
+    uploader: {
+      insertImageAsBase64URI: false,
+      url: false,
+      imagesExtensions: ["jpg", "png", "jpeg", "gif"],
+      withCredentials: false,
+    },
+    imageDefaultWidth: 300,
+    spellcheck: true,
+    toolbarAdaptive: false,
+    placeholder: "Type your content here...",
+  };
+
+  const mcqJoditConfig = {
+    ...joditConfig,
+    height: 150,
+    buttons: "bold,italic,underline,strikethrough,ul,ol,font,fontsize,brush,paragraph,align,link,image",
   };
 
   const columns = [
-    { title: 'Topic', dataIndex: 'topic', key: 'topic' },
-    { title: 'Class', dataIndex: 'class', key: 'class' },
+    { 
+      title: 'Topic', 
+      dataIndex: 'topic', 
+      key: 'topic',
+      render: (text) => text || 'No Topic'
+    },
+    { 
+      title: 'Class', 
+      dataIndex: 'class', 
+      key: 'class',
+      render: (text) => text || 'No Class'
+    },
     {
       title: 'Notes File',
       key: 'notesFile',
-      render: (_, record) => (
+      render: (_, record) =>
         record.notesFile ? (
-          <a
-            href={record.notesFile}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
-          >
-            View
+          <a href={record.notesFile} target="_blank" rel="noopener noreferrer">
+            View Notes
           </a>
         ) : (
-          <span className="text-gray-500">No File</span>
-        )
-      ),
+          <span>No File</span>
+        ),
     },
-    { title: 'SubCategory', dataIndex: 'subCategory', key: 'subCategory' },
+    { 
+      title: 'SubCategory', 
+      dataIndex: 'subCategory', 
+      key: 'subCategory',
+      render: (text) => text || 'No Subcategory'
+    },
     {
       title: 'Featured Image',
       key: 'featuredImage',
-      render: (_, record) => (
+      render: (_, record) =>
         record.featuredImage ? (
-          <Image
-            src={record.featuredImage}
-            width={50}
-            height={50}
-            className="rounded-md object-cover"
-            preview={{
-              src: record.featuredImage,
-            }}
-          />
+          <Image src={record.featuredImage} width={50} height={50} style={{ objectFit: 'cover' }} />
         ) : (
-          <span className="text-gray-500">No Image</span>
-        )
-      ),
+          <span>No Image</span>
+        ),
     },
-    {
-      title: 'Status',
-      dataIndex: 'status',
+    { 
+      title: 'Status', 
+      dataIndex: 'status', 
       key: 'status',
-      render: (text) => text ? text.charAt(0).toUpperCase() + text.slice(1) : 'Unknown',
+      render: (text) => text || 'published'
     },
     {
       title: 'Actions',
       key: 'action',
       render: (_, record) => (
-        <div className="flex space-x-2">
+        <div style={{ display: 'flex', gap: '8px' }}>
           <Button
             icon={<EditOutlined />}
-            className="text-green-600 hover:bg-green-50"
             onClick={() => handleEdit(record)}
             loading={loading}
           />
           <Popconfirm
-            title="Are you sure to delete this product?"
+            title="Are you sure you want to delete this topic?"
             onConfirm={() => handleDelete(record.id)}
             okText="Yes"
             cancelText="No"
           >
-            <Button
-              icon={<DeleteOutlined />}
-              className="text-red-600 hover:bg-red-50"
-              loading={deleting}
-            />
+            <Button icon={<DeleteOutlined />} loading={deleting} danger />
           </Popconfirm>
         </div>
       ),
     },
   ];
 
-  const joditConfig = {
-    readonly: false,
-    height: 400,
-    buttons: [
-      'source', '|',
-      'bold', 'italic', 'underline', 'strikethrough', '|',
-      'ul', 'ol', '|',
-      'font', 'fontsize', 'brush', 'paragraph', '|',
-      'align', 'outdent', 'indent', '|',
-      'cut', 'copy', 'paste', 'copyformat', '|',
-      'hr', 'table', 'link', '|',
-      'undo', 'redo', '|',
-      'preview', 'print', 'find', 'fullsize',
-      'image', 'video', 'file'
-    ],
-    uploader: {
-      insertImageAsBase64URI: true,
-      url: '/api/upload',
-      format: 'json',
-      imagesExtensions: ['jpg', 'png', 'jpeg', 'gif'],
-      filesVariableName: 'files',
-      withCredentials: false,
-      prepareData: (data) => {
-        const formData = new FormData();
-        Object.keys(data).forEach((key) => {
-          formData.append(key, data[key]);
-        });
-        return formData;
-      },
-      isSuccess: (resp) => resp.success,
-      getMessage: (resp) => resp.message,
-      process: (resp) => ({
-        files: resp.files || [],
-        path: resp.path || '',
-        baseurl: resp.baseurl || '',
-        error: resp.error || 0,
-        message: resp.message || ''
-      }),
-      error: (e) => {
-        console.error('Upload error:', e);
-        message.error('Image upload failed');
-      },
-      defaultHandlerSuccess: (data) => {
-        const { files } = data;
-        if (files && files.length) {
-          return files[0];
-        }
-        return '';
-      }
-    },
-    imageDefaultWidth: 300,
-    imagePosition: 'center',
-    spellcheck: true,
-    toolbarAdaptive: false,
-    showCharsCounter: true,
-    showWordsCounter: true,
-    showXPathInStatusbar: true,
-    askBeforePasteHTML: true,
-    askBeforePasteFromWord: true,
-    allowTabNavigtion: false,
-    placeholder: 'Type your content here...'
-  };
-
-  const handleDescriptionChange = (newContent) => {
-    debouncedDescriptionChange.current(newContent);
-  };
-
-  const beforeImageUpload = (file) => {
-    const isImage = file.type.startsWith('image/');
-    if (!isImage) {
-      message.error('You can only upload image files!');
-    }
-    const isLt5M = file.size / 1024 / 1024 < 5;
-    if (!isLt5M) {
-      message.error('Image must be smaller than 5MB!');
-    }
-    return isImage && isLt5M;
-  };
-
   return (
-    <div className="min-h-screen bg-gray-100 p-6 mt-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">
-            Manage Products
-          </h2>
-          <Table
-            dataSource={products}
-            columns={columns}
-            rowKey="id"
-            bordered
-            scroll={{ x: true }}
-            className="rounded-lg overflow-hidden"
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50'],
-            }}
-          />
-        </div>
+    <div style={{ padding: 24 }}>
+      <Table
+        dataSource={products}
+        columns={columns}
+        rowKey="id"
+        bordered
+        pagination={{ pageSize: 10 }}
+        loading={loading}
+      />
 
-        <Modal
-          title={
-            <div className="text-xl font-semibold text-gray-800">
-              Edit Product
-            </div>
-          }
-          open={isModalVisible}
-          onCancel={handleModalClose}
-          footer={null}
-          width={1000}
-          className="top-20"
-        >
-          <div className="bg-white p-6 rounded-lg">
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleUpdate}
-              className="space-y-4"
+      <Modal
+        title="Edit Topic"
+        open={isModalVisible}
+        onCancel={handleModalClose}
+        footer={null}
+        width={1000}
+        style={{ top: 20 }}
+      >
+        <Form form={form} layout="vertical" onFinish={handleUpdate}>
+          <Form.Item label="Featured Image (Optional)">
+            <Upload
+              customRequest={handleImageUpload}
+              showUploadList={false}
+              accept="image/*"
             >
-              <Form.Item label={<span className="font-medium">Featured Image</span>}>
-                <Upload
-                  name="featuredImage"
-                  customRequest={handleImageUpload}
-                  beforeUpload={beforeImageUpload}
-                  showUploadList={false}
-                  accept="image/*"
+              <Button icon={<UploadOutlined />} loading={imageUploading}>
+                {imageUploading ? "Uploading..." : "Change Featured Image"}
+              </Button>
+            </Upload>
+            {featuredImage && (
+              <div style={{ marginTop: 16 }}>
+                <Image src={featuredImage} width={200} />
+                <Button 
+                  type="link" 
+                  danger 
+                  onClick={() => setFeaturedImage(null)}
+                  style={{ marginTop: 8 }}
                 >
-                  <Button
-                    icon={<UploadOutlined />}
-                    loading={imageUploading}
-                    className="flex items-center bg-blue-500 text-white hover:bg-blue-600"
-                  >
-                    Change Featured Image
-                  </Button>
-                </Upload>
-                {featuredImage && (
-                  <div className="mt-4 flex items-center space-x-4">
-                    <Image
-                      src={featuredImage}
-                      width={200}
-                      className="rounded-md object-contain"
-                      alt="Featured Preview"
-                    />
-                    <Button
-                      type="link"
-                      danger
-                      onClick={handleRemoveImage}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      Remove Image
-                    </Button>
-                  </div>
-                )}
-              </Form.Item>
+                  Remove Image
+                </Button>
+              </div>
+            )}
+          </Form.Item>
 
-              <Form.Item label={<span className="font-medium">Notes File</span>}>
-                <Upload
-                  name="notesFile"
-                  customRequest={handleNotesUpload}
-                  showUploadList={false}
-                >
-                  <Button
-                    icon={<UploadOutlined />}
-                    loading={notesUploading}
-                    className="flex items-center bg-blue-500 text-white hover:bg-blue-600"
-                  >
-                    Change Notes File
-                  </Button>
-                </Upload>
-                {notesFile && (
-                  <div className="mt-4 flex items-center space-x-4">
-                    <a
-                      href={notesFile}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline"
-                    >
-                      View Notes File
-                    </a>
-                    <Button
-                      type="link"
-                      danger
-                      onClick={handleRemoveNotes}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      Remove File
-                    </Button>
-                  </div>
-                )}
-              </Form.Item>
+          <Form.Item label="Notes File">
+            <Upload 
+              customRequest={handleNotesUpload} 
+              showUploadList={false}
+              accept=".pdf"
+            >
+              <Button icon={<UploadOutlined />} loading={notesUploading}>
+                {notesUploading ? "Uploading..." : "Change Notes File"}
+              </Button>
+            </Upload>
+            {notesFile && (
+              <div style={{ marginTop: 8 }}>
+                <a href={notesFile} target="_blank" rel="noopener noreferrer" style={{ marginRight: 8 }}>
+                  View Notes File
+                </a>
+                <Button type="link" danger onClick={() => setNotesFile(null)}>
+                  Remove File
+                </Button>
+              </div>
+            )}
+          </Form.Item>
 
-              <Form.Item
-                label={<span className="font-medium">Topic</span>}
-                name="topic"
-                rules={[{ required: true, message: 'Please enter topic name!' }]}
-              >
-                <Input
-                  placeholder="Enter topic"
-                  className="rounded-md border-gray-300"
-                />
-              </Form.Item>
+          <Form.Item
+            name="topic"
+            label="Topic Name"
+            rules={[{ required: true, message: "Please enter topic name!" }]}
+          >
+            <Input placeholder="Enter topic name" />
+          </Form.Item>
 
-              <Form.Item
-                label={<span className="font-medium">Class</span>}
-                name="class"
-                rules={[{ required: true, message: 'Please select a class!' }]}
-              >
-                <Select
-                  placeholder="Select class"
-                  className="rounded-md"
-                >
-                  {classes.map((cls) => (
-                    <Select.Option key={cls.id} value={cls.name}>
-                      {cls.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
+          <Form.Item
+            name="class"
+            label="Class"
+            rules={[{ required: true, message: "Please select a class!" }]}
+          >
+            <Select
+              mode="multiple"
+              placeholder="Select class(es)"
+            >
+              {classes.map((cls) => (
+                <Option key={cls.id} value={cls.name}>
+                  {cls.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
 
-              <Form.Item
-                label={<span className="font-medium">SubCategory</span>}
-                name="subCategory"
-              >
-                <Input
-                  placeholder="Enter subcategory"
-                  className="rounded-md border-gray-300"
-                />
-              </Form.Item>
+          <Form.Item
+            name="category"
+            label="Category"
+          >
+            <Select placeholder="Select category">
+              {categories.map((cat) => (
+                <Option key={cat.id} value={cat.name}>
+                  {cat.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
 
-              <Form.Item label={<span className="font-medium">Description</span>}>
-                <JoditEditor
-                  ref={editor}
-                  value={description}
-                  config={joditConfig}
-                  onBlur={(newContent) => setDescription(newContent)}
-                  onChange={handleDescriptionChange}
-                />
-              </Form.Item>
+          <Form.Item
+            name="subCategory"
+            label="SubCategory"
+          >
+            <Select placeholder="Select subcategory">
+              {subCategories.map((sub) => (
+                <Option key={sub.id} value={sub.name}>
+                  {sub.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
 
-              <Form.Item label={<span className="font-medium">MCQs</span>}>
-                {mcqs.map((mcq, index) => (
-                  <div
-                    key={index}
-                    className="border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50"
-                  >
-                    <Row gutter={[16, 16]}>
-                      <Col span={24}>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="font-medium text-gray-700">
-                            Question {index + 1}
-                          </span>
-                          <Button
-                            danger
-                            onClick={() => handleDeleteMCQ(index)}
-                            size="small"
-                            className="text-red-500 hover:bg-red-50"
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                        <JoditEditor
-                          value={mcq.question}
-                          config={{
-                            ...joditConfig,
-                            height: 150,
-                            buttons: 'bold,italic,underline,strikethrough,ul,ol,font,fontsize,brush,paragraph,align,link,image'
-                          }}
-                          onBlur={(newContent) =>
-                            handleMCQChange(index, 'question', newContent)
-                          }
-                        />
-                      </Col>
+          <Form.Item label="MCQ Test">
+            <Switch checked={isMCQ} onChange={(checked) => setIsMCQ(checked)} />
+          </Form.Item>
 
-                      {mcq.options.map((option, optIndex) => (
-                        <Col span={12} key={optIndex}>
-                          <Input
-                            addonBefore={
-                              <input
-                                type="radio"
-                                name={`correct-${index}`}
-                                checked={mcq.correctAnswer === option}
-                                onChange={() =>
-                                  handleMCQChange(index, 'correctAnswer', option)
-                                }
-                              />
-                            }
-                            placeholder={`Option ${optIndex + 1}`}
-                            value={option}
-                            onChange={(e) => {
-                              const updatedOptions = [...mcq.options];
-                              const oldOption = updatedOptions[optIndex];
-                              updatedOptions[optIndex] = e.target.value;
-                              handleMCQChange(index, 'options', updatedOptions);
+          <Form.Item label="Description">
+            <JoditEditor
+              ref={editor}
+              value={description}
+              config={joditConfig}
+              onBlur={(newContent) => setDescription(newContent)}
+            />
+          </Form.Item>
 
-                              if (mcq.correctAnswer === oldOption) {
-                                handleMCQChange(index, 'correctAnswer', e.target.value);
-                              }
-                            }}
-                            className="rounded-md border-gray-300"
-                          />
-                        </Col>
-                      ))}
-
-                      {mcq.correctAnswer && (
-                        <Col span={24}>
-                          <JoditEditor
-                            value={mcq.logic}
-                            config={{
-                              ...joditConfig,
-                              height: 100,
-                              buttons: 'bold,italic,underline,strikethrough,ul,ol,font,fontsize,brush,paragraph,align,link'
-                            }}
-                            onBlur={(newContent) =>
-                              handleMCQChange(index, 'logic', newContent)
-                            }
-                          />
-                        </Col>
-                      )}
-                    </Row>
-                  </div>
-                ))}
+          {isMCQ && (
+            <>
+              {renderMCQTemplate()}
+              <Form.Item>
                 <Button
                   type="dashed"
                   onClick={handleAddMCQ}
-                  className="w-full flex items-center justify-center text-blue-500 hover:bg-blue-50"
+                  block
+                  icon={<PlusOutlined />}
                 >
-                  <PlusOutlined /> Add MCQ
+                  Add More MCQs
                 </Button>
               </Form.Item>
+            </>
+          )}
 
-              <Form.Item className="flex justify-end space-x-4">
-                <Button
-                  type="primary"
-                  onClick={handleSaveDraft}
-                  loading={loading}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-md"
-                >
-                  Save as Draft
-                </Button>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={loading}
-                  className="bg-blue-500 hover:bg-blue-600 text-white rounded-md"
-                >
-                  Update
-                </Button>
-              </Form.Item>
-            </Form>
-          </div>
-        </Modal>
-      </div>
+          <Form.Item style={{ marginTop: 24 }}>
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              loading={loading}
+              style={{ marginRight: 8 }}
+            >
+              Update Topic
+            </Button>
+            <Button onClick={handleModalClose}>
+              Cancel
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

@@ -1,16 +1,11 @@
 // src/components/PdfViewer.js
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Worker, Viewer } from "@react-pdf-viewer/core";
 import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import { Card, Spin } from "antd";
-import * as pdfjs from "pdfjs-dist/build/pdf";
-import workerSrc from "pdfjs-dist/build/pdf.worker.entry";
-
-// ✅ Set PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 const PdfViewer = () => {
   const location = useLocation();
@@ -20,32 +15,12 @@ const PdfViewer = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [pdfBlob, setPdfBlob] = useState(null);
 
   const pdfPlugin = defaultLayoutPlugin();
 
   useEffect(() => {
     if (!fileUrl) return;
-
-    const fetchPdf = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch(fileUrl);
-        if (!response.ok) throw new Error("Failed to fetch PDF");
-
-        const blob = await response.blob();
-        setPdfBlob(blob);
-        setLoading(false);
-      } catch (err) {
-        console.error("PDF fetch error:", err);
-        setError("Failed to load PDF. Make sure the file exists.");
-        setLoading(false);
-      }
-    };
-
-    fetchPdf();
+    setLoading(false); // No need to fetch manually, Viewer handles URL directly
   }, [fileUrl]);
 
   if (!fileUrl) return <h3 className="text-center text-danger">Invalid File URL</h3>;
@@ -64,9 +39,9 @@ const PdfViewer = () => {
           </div>
         )}
 
-        {pdfBlob && (
-          <Worker workerUrl={workerSrc}>
-            <Viewer fileUrl={pdfBlob} plugins={[pdfPlugin]} />
+        {!loading && (
+          <Worker workerUrl={`https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js`}>
+            <Viewer fileUrl={fileUrl} plugins={[pdfPlugin]} />
           </Worker>
         )}
       </Card>
