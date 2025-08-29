@@ -4,19 +4,16 @@ import "react-toastify/dist/ReactToastify.css";
 import html2canvas from "html2canvas";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile } from "firebase/auth";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
-import { app } from '../config/firebase'; // Assume this is your Firebase config file where the app is initialized
-
-import img from "../assets/images/new-logo.webp"; // Logo image
-import certificateBg from "../../src/assets/images/certificate bg.png"; 
+import { app } from '../config/firebase';
+import img from "../assets/images/new-logo.webp";
+import certificateBg from "../../src/assets/images/certificate bg.png";
 
 const CertificateGenerator = ({
   mcqs,
   selectedAnswer,
-  userName: propUserName, // Keep prop but override with auth if available
   calculateResults,
   topicName,
   onShowResults,
-  onRetakeTest, // New prop to handle test retake
 }) => {
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -35,12 +32,13 @@ const CertificateGenerator = ({
   const [className, setClassName] = useState('');
   const [error, setError] = useState('');
   const [attempts, setAttempts] = useState(0);
+  const [isRegisterLoading, setIsRegisterLoading] = useState(false);
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
 
-  // Preload background image for reliable capture
   useEffect(() => {
     const bgImage = new Image();
     bgImage.src = certificateBg;
-    bgImage.crossOrigin = "anonymous"; // Ensure CORS compliance
+    bgImage.crossOrigin = "anonymous";
     bgImage.onload = () => {
       setBgLoaded(true);
     };
@@ -49,7 +47,6 @@ const CertificateGenerator = ({
     };
   }, []);
 
-  // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -57,24 +54,20 @@ const CertificateGenerator = ({
     return unsubscribe;
   }, []);
 
-  // Check and generate certificate when user is logged in and bg is loaded
   useEffect(() => {
     if (user && bgLoaded && !certificateGenerated) {
       generateCertificate();
     } else if (!user && bgLoaded) {
-      setShowRegister(true); // Show register if not authenticated
+      setShowLogin(true);
     }
   }, [user, bgLoaded, certificateGenerated]);
 
   const generateCertificate = async () => {
     const correctAnswers = calculateResults();
     const score = (correctAnswers / mcqs.length) * 100;
-    const complement =
-      score >= 80 ? "Excellent" : score >= 50 ? "Good" : "Needs Improvement";
+    const complement = score >= 80 ? "Excellent" : score >= 50 ? "Good" : "Needs Improvement";
+    const userNameToUse = user?.displayName || name || 'User';
 
-    const userNameToUse = user?.displayName || propUserName || 'User';
-
-    // Fetch attempts from Firebase
     let topicAttempts = 1;
     if (user) {
       const certDocRef = doc(db, "certificates", `${user.uid}_${topicName}`);
@@ -94,18 +87,17 @@ const CertificateGenerator = ({
     });
 
     setIsCertificateVisible(true);
-    sendToFirebase(correctAnswers, complement, topicAttempts);
+    sendToFirebase(correctAnswers, complement, topicAttempts, userNameToUse);
     setCertificateGenerated(true);
   };
 
-  const sendToFirebase = async (correctAnswers, complement, topicAttempts) => {
+  const sendToFirebase = async (correctAnswers, complement, topicAttempts, userNameToUse) => {
     if (!user) return;
 
-    // For certificates (per topic)
     const certDocRef = doc(db, "certificates", `${user.uid}_${topicName}`);
     await setDoc(certDocRef, {
       userId: user.uid,
-      userName: user.displayName,
+      userName: userNameToUse,
       topic: topicName,
       score: correctAnswers,
       totalQuestions: mcqs.length,
@@ -114,17 +106,15 @@ const CertificateGenerator = ({
       attempts: topicAttempts,
     }, { merge: true });
 
-    // Fetch user class
     const userDocRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userDocRef);
     const userClass = userSnap.exists() ? userSnap.data().class : '';
 
-    // For toppers (per user)
     const topperDocRef = doc(db, "toppers", user.uid);
     const topperSnap = await getDoc(topperDocRef);
     let totalAttempts = (topperSnap.exists() ? (topperSnap.data().totalAttempts || 0) : 0) + 1;
     await setDoc(topperDocRef, {
-      name: user.displayName,
+      name: userNameToUse,
       class: userClass,
       score: correctAnswers,
       totalQuestions: mcqs.length,
@@ -145,6 +135,8 @@ const CertificateGenerator = ({
       setError('Class must be between 1 and 12');
       return;
     }
+    
+    setIsRegisterLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
@@ -164,42 +156,54 @@ const CertificateGenerator = ({
         theme: "colored",
       });
       setShowRegister(false);
-      // Automatically log in after registration
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsRegisterLoading(false);
     }
   };
 
   const handleLogin = async () => {
     setError('');
+    if (!name || !email || !password) {
+      setError('All fields are required');
+      return;
+    }
+    
+    setIsLoginLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: name });
+      const userDocRef = doc(db, "users", userCredential.user.uid);
+      await setDoc(userDocRef, {
+        name,
+        email,
+      }, { merge: true });
       setShowLogin(false);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoginLoading(false);
     }
   };
 
   const handleDownloadCertificate = () => {
     const certificateElement = document.querySelector("#certificate");
-
-    // Hide buttons before capturing the certificate
     const footer = document.querySelector("#certificate-footer");
     if (footer) footer.style.display = "none";
 
-    html2canvas(certificateElement, { 
-      useCORS: true, 
-      allowTaint: false, 
+    html2canvas(certificateElement, {
+      useCORS: true,
+      allowTaint: false,
       backgroundColor: null,
-      scale: window.devicePixelRatio, // Ensure high-quality capture on high-DPI screens
+      scale: window.devicePixelRatio,
     }).then((canvas) => {
       const imageUrl = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = imageUrl;
       link.download = `${certificateData.userName}_certificate.png`;
       link.click();
-
       setIsDownloaded(true);
       if (footer) footer.style.display = "flex";
     }).catch((error) => {
@@ -246,19 +250,40 @@ const CertificateGenerator = ({
               onChange={(e) => setPassword(e.target.value)}
               style={modalStyles.input}
             />
-            <button onClick={handleRegister} style={modalStyles.button}>
-              Register & Start Journey
+            <button 
+              onClick={handleRegister} 
+              style={modalStyles.button}
+              disabled={isRegisterLoading}
+            >
+              {isRegisterLoading ? "Loading..." : "Register"}
             </button>
-            <p style={modalStyles.text}>Already a topper? <span onClick={() => { setShowRegister(false); setShowLogin(true); }} style={modalStyles.link}>Login</span></p>
+            <p style={modalStyles.text}>
+              Already registered?{" "}
+              <span
+                onClick={() => {
+                  setShowRegister(false);
+                  setShowLogin(true);
+                }}
+                style={modalStyles.link}
+              >
+                Login
+              </span>
+            </p>
           </div>
         </div>
       )}
-
       {showLogin && (
         <div style={modalStyles.modal}>
           <div style={modalStyles.modalContent}>
-            <h2 style={modalStyles.title}>Login to Continue</h2>
+            <h2 style={modalStyles.title}>Login to Generate Certificate</h2>
             {error && <p style={modalStyles.error}>{error}</p>}
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              style={modalStyles.input}
+            />
             <input
               type="email"
               placeholder="Email Address"
@@ -273,20 +298,34 @@ const CertificateGenerator = ({
               onChange={(e) => setPassword(e.target.value)}
               style={modalStyles.input}
             />
-            <button onClick={handleLogin} style={modalStyles.button}>
-              Login
+            <button 
+              onClick={handleLogin} 
+              style={modalStyles.button}
+              disabled={isLoginLoading}
+            >
+              {isLoginLoading ? "Loading..." : "Login"}
             </button>
-            <p style={modalStyles.text}>No account? <span onClick={() => { setShowLogin(false); setShowRegister(true); }} style={modalStyles.link}>Register</span></p>
+            <p style={modalStyles.text}>
+              No account?{" "}
+              <span
+                onClick={() => {
+                  setShowLogin(false);
+                  setShowRegister(true);
+                }}
+                style={modalStyles.link}
+              >
+                Register
+              </span>
+            </p>
           </div>
         </div>
       )}
-
       {isCertificateVisible && (
         <div id="certificate" style={certificateStyles.certificate}>
-          <img 
-            src={certificateBg} 
-            alt="Certificate Background" 
-            style={certificateStyles.backgroundImage} 
+          <img
+            src={certificateBg}
+            alt="Certificate Background"
+            style={certificateStyles.backgroundImage}
           />
           <div style={certificateStyles.content}>
             <div style={certificateStyles.header}>
@@ -297,9 +336,15 @@ const CertificateGenerator = ({
               <h1 style={certificateStyles.userName}>{certificateData.userName}</h1>
               <p style={certificateStyles.bodyText}>Has successfully completed the course</p>
               <h3 style={certificateStyles.topic}>{certificateData.topic}</h3>
-              <p style={certificateStyles.bodyText}>with a score of <strong>{certificateData.score}</strong> out of {mcqs.length}</p>
-              <p style={certificateStyles.bodyText}>Evaluation: <strong>{certificateData.complement}</strong></p>
-              <p style={certificateStyles.bodyText}>Attempt: <strong>{certificateData.attempts}</strong></p>
+              <p style={certificateStyles.bodyText}>
+                with a score of <strong>{certificateData.score}</strong> out of {mcqs.length}
+              </p>
+              <p style={certificateStyles.bodyText}>
+                Evaluation: <strong>{certificateData.complement}</strong>
+              </p>
+              <p style={certificateStyles.bodyText}>
+                Attempt: <strong>{certificateData.attempts}</strong>
+              </p>
               <p style={certificateStyles.issueDate}>
                 Issued on: <strong>{new Date().toLocaleDateString()}</strong>
               </p>
@@ -313,9 +358,6 @@ const CertificateGenerator = ({
               <button style={certificateStyles.downloadBtn} onClick={onShowResults}>
                 View Correct Answers
               </button>
-              <button style={certificateStyles.downloadBtn} onClick={onRetakeTest}>
-                Retake Test
-              </button>
             </div>
           </div>
         </div>
@@ -326,10 +368,10 @@ const CertificateGenerator = ({
 
 const certificateStyles = {
   certificate: {
-    maxWidth: "90vw", // Use viewport width for responsiveness
+    maxWidth: "90vw",
     width: "100%",
     margin: "20px auto",
-    padding: "5vw 4vw", // Relative padding
+    padding: "5vw 4vw",
     border: "4px double #D4AF37",
     borderRadius: "2vw",
     textAlign: "center",
@@ -469,7 +511,7 @@ const certificateStyles = {
     display: "flex",
     justifyContent: "center",
     gap: "3vw",
-    flexWrap: "wrap", // Allow buttons to wrap on small screens
+    flexWrap: "wrap",
     "@media (max-width: 600px)": {
       gap: "2vw",
       flexDirection: "column",
@@ -501,105 +543,78 @@ const certificateStyles = {
 
 const modalStyles = {
   modal: {
-    position: 'fixed',
+    position: "fixed",
     top: 0,
     left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 1000,
   },
   modalContent: {
-    background: "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
-    padding: '5vw',
-    borderRadius: '2vw',
-    width: '80vw',
-    maxWidth: '350px',
-    textAlign: 'center',
-    boxShadow: "0 2vw 4vw rgba(0,0,0,0.2)",
-    "@media (max-width: 600px)": {
-      width: '90vw',
-      padding: '6vw',
-    },
+    background: "#ffffff",
+    padding: "1.5rem",
+    borderRadius: "12px",
+    width: "100%",
+    maxWidth: "350px",
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
+    textAlign: "center",
   },
   title: {
-    fontSize: "5vw",
-    maxFontSize: "28px",
+    fontSize: "1.5rem",
     fontFamily: "'Playfair Display', serif",
     color: "#1a472a",
-    marginBottom: "3vw",
-    "@media (max-width: 600px)": {
-      fontSize: "6vw",
-      maxFontSize: "24px",
-    },
+    marginBottom: "1rem",
+    fontWeight: 700,
   },
   input: {
-    display: 'block',
-    width: '100%',
-    margin: '2vw 0',
-    padding: '2vw',
-    border: '1px solid #ccc',
-    borderRadius: '1vw',
+    display: "block",
+    width: "100%",
+    margin: "0.5rem 0",
+    padding: "0.75rem",
+    border: "1px solid #e0e0e0",
+    borderRadius: "8px",
     fontFamily: "'Crimson Text', serif",
-    fontSize: "2vw",
-    maxFontSize: "16px",
-    transition: "border-color 0.3s ease",
-    "@media (max-width: 600px)": {
-      fontSize: "3.5vw",
-      maxFontSize: "14px",
-      padding: '3vw',
-    },
+    fontSize: "1rem",
+    transition: "border-color 0.3s ease, box-shadow 0.3s ease",
+    outline: "none",
   },
   button: {
-    padding: '2vw 4vw',
+    width: "100%",
+    padding: "0.75rem",
     background: "linear-gradient(45deg, #1a472a, #2a6b3f)",
-    color: '#fff',
-    border: 'none',
-    borderRadius: '1vw',
-    cursor: 'pointer',
-    marginTop: '2vw',
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
     fontFamily: "'Crimson Text', serif",
-    fontSize: "2vw",
-    maxFontSize: "18px",
+    fontSize: "1rem",
     fontWeight: 600,
-    transition: "all 0.3s ease",
-    boxShadow: "0 0.4vw 0.8vw rgba(0,0,0,0.15)",
-    "@media (max-width: 600px)": {
-      fontSize: "3.5vw",
-      maxFontSize: "16px",
-      padding: '3vw 5vw',
-    },
+    transition: "background 0.3s ease, transform 0.2s ease",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+    marginTop: "0.5rem",
   },
   link: {
-    color: '#1a472a',
-    cursor: 'pointer',
-    textDecoration: 'underline',
+    color: "#1a472a",
+    cursor: "pointer",
+    textDecoration: "underline",
     fontWeight: 600,
+    transition: "color 0.3s ease",
   },
   text: {
     fontFamily: "'Crimson Text', serif",
-    fontSize: "2vw",
-    maxFontSize: "16px",
+    fontSize: "0.9rem",
     color: "#2c3e50",
-    marginTop: "2vw",
-    "@media (max-width: 600px)": {
-      fontSize: "3.5vw",
-      maxFontSize: "14px",
-    },
+    marginTop: "1rem",
   },
   error: {
-    color: '#d32f2f',
-    marginBottom: '2vw',
+    color: "#d32f2f",
+    marginBottom: "1rem",
     fontFamily: "'Crimson Text', serif",
-    fontSize: "1.8vw",
-    maxFontSize: "14px",
-    "@media (max-width: 600px)": {
-      fontSize: "3vw",
-      maxFontSize: "12px",
-    },
+    fontSize: "0.9rem",
   },
 };
 

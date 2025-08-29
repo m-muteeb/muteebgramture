@@ -86,10 +86,10 @@ const ToppersWall = () => {
     <div style={styles.container}>
       <div style={styles.header}>
         <div style={styles.titleContainer}>
-          <h1 style={styles.mainTitle}>Excellence Hall of Fame</h1>
+          <h1 style={styles.mainTitle}>Academic Excellence</h1>
           <div style={styles.titleUnderline}></div>
         </div>
-        <p style={styles.subtitle}>Celebrating academic excellence and outstanding achievements</p>
+        <p style={styles.subtitle}>Celebrating outstanding achievements and academic success</p>
       </div>
       
       <div style={styles.tabContainer}>
@@ -97,22 +97,19 @@ const ToppersWall = () => {
           style={{...styles.tab, ...(activeTab === 'daily' ? styles.activeTab : {})}}
           onClick={() => setActiveTab('daily')}
         >
-          <span style={styles.tabIcon}>🌞</span>
-          Today's Stars
+          <span style={styles.tabIcon}>Today</span>
         </button>
         <button 
           style={{...styles.tab, ...(activeTab === 'weekly' ? styles.activeTab : {})}}
           onClick={() => setActiveTab('weekly')}
         >
-          <span style={styles.tabIcon}>⭐</span>
-          Weekly Achievers
+          <span style={styles.tabIcon}>Week</span>
         </button>
         <button 
           style={{...styles.tab, ...(activeTab === 'monthly' ? styles.activeTab : {})}}
           onClick={() => setActiveTab('monthly')}
         >
-          <span style={styles.tabIcon}>🏆</span>
-          Monthly Champions
+          <span style={styles.tabIcon}>Month</span>
         </button>
       </div>
 
@@ -120,21 +117,21 @@ const ToppersWall = () => {
         {activeTab === 'daily' && (
           <TopperSection 
             toppers={toppers.daily} 
-            title="Today's Academic Stars" 
+            title="Today's Top Performers" 
             period="daily" 
           />
         )}
         {activeTab === 'weekly' && (
           <TopperSection 
             toppers={toppers.weekly} 
-            title="This Week's Top Performers" 
+            title="This Week's Achievers" 
             period="weekly" 
           />
         )}
         {activeTab === 'monthly' && (
           <TopperSection 
             toppers={toppers.monthly} 
-            title="Monthly Excellence Champions" 
+            title="Monthly Excellence" 
             period="monthly" 
           />
         )}
@@ -149,7 +146,7 @@ const TopperSection = ({ toppers, title, period }) => {
       <div style={styles.sectionHeader}>
         <h2 style={styles.sectionTitle}>{title}</h2>
         <div style={styles.sectionCount}>
-          {toppers.length} {toppers.length === 1 ? 'Achiever' : 'Achievers'}
+          {toppers.length} {toppers.length === 1 ? 'Student' : 'Students'}
         </div>
       </div>
       <TopperList toppers={toppers} period={period} />
@@ -162,8 +159,8 @@ const TopperList = ({ toppers, period }) => {
     return (
       <div style={styles.emptyState}>
         <div style={styles.emptyIcon}>📊</div>
-        <p style={styles.emptyText}>No achievements recorded yet</p>
-        <p style={styles.emptySubtext}>Be the first to make your mark on the leaderboard!</p>
+        <p style={styles.emptyText}>No records yet</p>
+        <p style={styles.emptySubtext}>Be the first to make your mark!</p>
       </div>
     );
   }
@@ -188,10 +185,10 @@ const TopperCard = ({ topper, rank, period }) => {
   };
 
   const getRankIcon = (rank) => {
-    if (rank === 1) return { emoji: '🥇', label: 'Gold Medal' };
-    if (rank === 2) return { emoji: '🥈', label: 'Silver Medal' };
-    if (rank === 3) return { emoji: '🥉', label: 'Bronze Medal' };
-    return { emoji: `#${rank}`, label: `Rank ${rank}` };
+    if (rank === 1) return { emoji: '1st', label: 'First Place' };
+    if (rank === 2) return { emoji: '2nd', label: 'Second Place' };
+    if (rank === 3) return { emoji: '3rd', label: 'Third Place' };
+    return { emoji: `${rank}th`, label: `Rank ${rank}` };
   };
 
   const rankInfo = getRankIcon(rank);
@@ -202,8 +199,7 @@ const TopperCard = ({ topper, rank, period }) => {
       style={{ 
         ...styles.card, 
         ...getRankStyle(rank),
-        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
-        boxShadow: isHovered ? '0 12px 25px rgba(0, 0, 0, 0.15)' : styles.card.boxShadow,
+        transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -211,35 +207,23 @@ const TopperCard = ({ topper, rank, period }) => {
       <div style={styles.cardHeader}>
         <div style={styles.rankContainer}>
           <div style={styles.rankBadge}>
-            <span style={styles.rankEmoji} aria-label={rankInfo.label}>
+            <span style={styles.rankText} aria-label={rankInfo.label}>
               {rankInfo.emoji}
             </span>
           </div>
-          <div style={styles.medalEffect}></div>
         </div>
         
         <div style={styles.accuracyContainer}>
-          <div style={styles.accuracyCircle}>
-            <span style={styles.accuracyValue}>{accuracy}%</span>
-          </div>
-          <span style={styles.accuracyLabel}>Accuracy</span>
+          <span style={styles.accuracyValue}>{accuracy}%</span>
+          <span style={styles.accuracyLabel}>accuracy</span>
         </div>
       </div>
       
       <div style={styles.cardBody}>
-        <h3 style={styles.name}>{topper.name || "Academic Star"}</h3>
+        <h3 style={styles.name}>{topper.name || "Student"}</h3>
         <p style={styles.class}>Class {topper.class || "X"}</p>
         
         <div style={styles.scoreDisplay}>
-          <div style={styles.scoreBar}>
-            <div 
-              style={{ 
-                ...styles.scoreProgress, 
-                width: `${accuracy}%`,
-                backgroundColor: accuracy >= 80 ? '#10B981' : accuracy >= 60 ? '#F59E0B' : '#EF4444'
-              }} 
-            />
-          </div>
           <div style={styles.scoreText}>
             <span style={styles.scoreValue}>{topper.score || 0}</span>
             <span style={styles.scoreDivider}>/</span>
@@ -248,12 +232,10 @@ const TopperCard = ({ topper, rank, period }) => {
         </div>
         
         <div style={styles.topicContainer}>
-          <span style={styles.topicLabel}>Mastered Topic:</span>
           <span style={styles.topicValue}>{topper.topic || "General Knowledge"}</span>
         </div>
 
         <div style={styles.attemptsContainer}>
-          <span style={styles.attemptsIcon}>📝</span>
           <span style={styles.attemptsText}>{topper.totalAttempts || 1} attempt{topper.totalAttempts !== 1 ? 's' : ''}</span>
         </div>
       </div>
@@ -262,19 +244,7 @@ const TopperCard = ({ topper, rank, period }) => {
         <div style={styles.periodBadge}>
           {period === 'daily' ? 'Today' : period === 'weekly' ? 'This Week' : 'This Month'}
         </div>
-        <div style={styles.date}>
-          {topper.lastUpdated ? new Date(topper.lastUpdated).toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric' 
-          }) : ''}
-        </div>
       </div>
-      
-      {rank <= 3 && (
-        <div style={styles.cornerRibbon}>
-          {rank === 1 ? 'Champion' : rank === 2 ? 'Runner-Up' : 'Top Performer'}
-        </div>
-      )}
     </div>
   );
 };
@@ -282,16 +252,16 @@ const TopperCard = ({ topper, rank, period }) => {
 const styles = {
   container: {
     minHeight: '100vh',
-    padding: '20px',
-    fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+    padding: '16px',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     maxWidth: '1200px',
     margin: '0 auto',
-  
+   
   },
   header: {
     textAlign: 'center',
-    marginBottom: '40px',
-    padding: '40px 20px 20px',
+    marginBottom: '32px',
+    padding: '32px 16px 16px',
   },
   titleContainer: {
     position: 'relative',
@@ -299,26 +269,23 @@ const styles = {
     marginBottom: '12px',
   },
   mainTitle: {
-    fontSize: '2.8rem',
-    fontWeight: '800',
-    color: '#1F2937',
+    fontSize: 'clamp(2rem, 5vw, 2.5rem)',
+    fontWeight: '700',
+    color: '#1a202c',
     margin: '0 0 8px 0',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
     letterSpacing: '-0.5px',
-    marginTop: '20px',
+    marginTop: '20px'
   },
   titleUnderline: {
-    height: '4px',
-    width: '60px',
-    background: 'linear-gradient(90deg, #667eea, #764ba2)',
+    height: '3px',
+    width: '50px',
+    backgroundColor: '#4a5568',
     margin: '0 auto',
     borderRadius: '2px',
   },
   subtitle: {
-    fontSize: '1.2rem',
-    color: '#6B7280',
+    fontSize: 'clamp(1rem, 3vw, 1.1rem)',
+    color: '#718096',
     margin: '0',
     fontWeight: '400',
     maxWidth: '500px',
@@ -328,182 +295,143 @@ const styles = {
   tabContainer: {
     display: 'flex',
     justifyContent: 'center',
-    marginBottom: '40px',
-    gap: '12px',
+    marginBottom: '32px',
+    gap: '8px',
+    flexWrap: 'wrap',
   },
   tab: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px 24px',
+    padding: '12px 20px',
     border: 'none',
-    borderRadius: '50px',
+    borderRadius: '8px',
     background: 'white',
-    color: '#6B7280',
+    color: '#4a5568',
     fontWeight: '600',
     fontSize: '14px',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+    transition: 'all 0.2s ease',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    minWidth: '80px',
   },
   activeTab: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    backgroundColor: '#2d3748',
     color: 'white',
-    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
   },
   tabIcon: {
-    fontSize: '18px',
+    fontSize: '14px',
   },
   content: {
-    marginBottom: '40px',
+    marginBottom: '32px',
   },
   section: {
     backgroundColor: 'white',
-    borderRadius: '20px',
-    padding: '32px',
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.08)',
+    borderRadius: '12px',
+    padding: '24px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+    marginBottom: '24px',
   },
   sectionHeader: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: '32px',
-    paddingBottom: '20px',
-    borderBottom: '1px solid #F3F4F6',
+    marginBottom: '24px',
+    paddingBottom: '16px',
+    borderBottom: '1px solid #e2e8f0',
+    flexWrap: 'wrap',
+    gap: '12px',
   },
   sectionTitle: {
-    fontSize: '1.8rem',
-    fontWeight: '700',
-    color: '#1F2937',
+    fontSize: 'clamp(1.25rem, 4vw, 1.5rem)',
+    fontWeight: '600',
+    color: '#2d3748',
     margin: '0',
   },
   sectionCount: {
-    backgroundColor: '#EEF2FF',
-    color: '#6366F1',
+    backgroundColor: '#edf2f7',
+    color: '#4a5568',
     fontSize: '14px',
-    fontWeight: '600',
-    padding: '6px 12px',
-    borderRadius: '20px',
+    fontWeight: '500',
+    padding: '4px 12px',
+    borderRadius: '12px',
   },
   list: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-    gap: '24px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gap: '20px',
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: '16px',
-    padding: '24px',
-    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.06)',
-    border: '1px solid #F3F4F6',
-    transition: 'all 0.3s ease',
+    borderRadius: '12px',
+    padding: '20px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+    border: '1px solid #e2e8f0',
+    transition: 'all 0.2s ease',
     position: 'relative',
     overflow: 'hidden',
   },
   goldRank: {
-    borderTop: '4px solid #FFD700',
-    background: 'linear-gradient(to bottom, #FFFFFF, #FFF9E6)',
+    borderTop: '3px solid #d69e2e',
   },
   silverRank: {
-    borderTop: '4px solid #C0C0C0',
-    background: 'linear-gradient(to bottom, #FFFFFF, #F8F8F8)',
+    borderTop: '3px solid #a0aec0',
   },
   bronzeRank: {
-    borderTop: '4px solid #CD7F32',
-    background: 'linear-gradient(to bottom, #FFFFFF, #FDF3E7)',
+    borderTop: '3px solid #ed8936',
   },
   standardRank: {
-    borderTop: '4px solid #E5E7EB',
+    borderTop: '3px solid #e2e8f0',
   },
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: '20px',
+    marginBottom: '16px',
   },
   rankContainer: {
     position: 'relative',
   },
   rankBadge: {
-    width: '50px',
-    height: '50px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '20px',
+    padding: '6px 12px',
+    borderRadius: '16px',
+    display: 'inline-block',
+  },
+  rankText: {
+    fontSize: '14px',
     fontWeight: '700',
-    zIndex: '2',
-    position: 'relative',
-  },
-  medalEffect: {
-    position: 'absolute',
-    top: '-5px',
-    left: '-5px',
-    right: '-5px',
-    bottom: '-5px',
-    borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)',
-    zIndex: '1',
-  },
-  rankEmoji: {
-    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+    color: '#2d3748',
   },
   accuracyContainer: {
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
-  },
-  accuracyCircle: {
-    width: '50px',
-    height: '50px',
-    borderRadius: '50%',
-    background: 'conic-gradient(#10B981 0% var(--accuracy, 0%), #F3F4F6 var(--accuracy, 0%) 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '6px',
+    alignItems: 'flex-end',
   },
   accuracyValue: {
-    fontSize: '12px',
+    fontSize: '16px',
     fontWeight: '700',
-    color: '#10B981',
+    color: '#38a169',
   },
   accuracyLabel: {
-    fontSize: '11px',
-    color: '#6B7280',
-    fontWeight: '600',
+    fontSize: '12px',
+    color: '#718096',
+    fontWeight: '500',
   },
   cardBody: {
-    marginBottom: '20px',
+    marginBottom: '16px',
+    textAlign: 'center',
   },
   name: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: '#1F2937',
-    margin: '0 0 6px 0',
-    textAlign: 'center',
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#2d3748',
+    margin: '0 0 4px 0',
   },
   class: {
     fontSize: '14px',
-    color: '#6B7280',
-    margin: '0 0 20px 0',
-    textAlign: 'center',
+    color: '#718096',
+    margin: '0 0 16px 0',
   },
   scoreDisplay: {
-    marginBottom: '20px',
-  },
-  scoreBar: {
-    height: '8px',
-    backgroundColor: '#F3F4F6',
-    borderRadius: '4px',
-    overflow: 'hidden',
-    marginBottom: '10px',
-  },
-  scoreProgress: {
-    height: '100%',
-    borderRadius: '4px',
-    transition: 'width 0.5s ease',
+    marginBottom: '16px',
   },
   scoreText: {
     display: 'flex',
@@ -513,94 +441,61 @@ const styles = {
   },
   scoreValue: {
     fontSize: '24px',
-    fontWeight: '800',
-    color: '#1F2937',
+    fontWeight: '700',
+    color: '#2d3748',
   },
   scoreDivider: {
     fontSize: '18px',
-    color: '#D1D5DB',
-    fontWeight: '600',
+    color: '#cbd5e0',
+    fontWeight: '500',
   },
   totalQuestions: {
     fontSize: '16px',
-    color: '#6B7280',
-    fontWeight: '600',
+    color: '#718096',
+    fontWeight: '500',
   },
   topicContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    marginBottom: '16px',
-  },
-  topicLabel: {
-    fontSize: '12px',
-    color: '#6B7280',
-    marginBottom: '4px',
+    marginBottom: '12px',
   },
   topicValue: {
     fontSize: '14px',
-    fontWeight: '600',
-    color: '#6366F1',
-    textAlign: 'center',
+    fontWeight: '500',
+    color: '#4a5568',
+    fontStyle: 'italic',
   },
   attemptsContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '6px',
-  },
-  attemptsIcon: {
-    fontSize: '14px',
+    marginBottom: '12px',
   },
   attemptsText: {
     fontSize: '14px',
-    color: '#6B7280',
+    color: '#718096',
   },
   cardFooter: {
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: '16px',
-    borderTop: '1px solid #F3F4F6',
+    justifyContent: 'center',
+    paddingTop: '12px',
+    borderTop: '1px solid #e2e8f0',
   },
   periodBadge: {
-    backgroundColor: '#EEF2FF',
-    color: '#6366F1',
+    backgroundColor: '#ebf8ff',
+    color: '#3182ce',
     fontSize: '12px',
     fontWeight: '600',
-    padding: '6px 12px',
-    borderRadius: '16px',
-  },
-  date: {
-    fontSize: '12px',
-    color: '#9CA3AF',
-  },
-  cornerRibbon: {
-    position: 'absolute',
-    top: '12px',
-    right: '-20px',
-    transform: 'rotate(45deg)',
-    backgroundColor: '#FFD700',
-    color: '#1F2937',
-    fontSize: '10px',
-    fontWeight: '800',
-    padding: '4px 24px',
-    width: '100px',
-    textAlign: 'center',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+    padding: '4px 12px',
+    borderRadius: '12px',
   },
   emptyState: {
     textAlign: 'center',
-    padding: '60px 20px',
-    color: '#9CA3AF',
+    padding: '40px 20px',
+    color: '#a0aec0',
   },
   emptyIcon: {
-    fontSize: '48px',
-    marginBottom: '16px',
+    fontSize: '40px',
+    marginBottom: '12px',
     opacity: '0.5',
   },
   emptyText: {
-    fontSize: '18px',
+    fontSize: '16px',
     fontWeight: '600',
     margin: '0 0 8px 0',
   },
@@ -614,20 +509,20 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    height: '60vh',
+    height: '50vh',
   },
   spinner: {
-    width: '50px',
-    height: '50px',
-    border: '4px solid #E5E7EB',
-    borderTop: '4px solid #6366F1',
+    width: '40px',
+    height: '40px',
+    border: '3px solid #e2e8f0',
+    borderTop: '3px solid #4a5568',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
-    marginBottom: '20px',
+    marginBottom: '16px',
   },
   loadingText: {
-    fontSize: '18px',
-    color: '#6B7280',
+    fontSize: '16px',
+    color: '#718096',
     fontWeight: '500',
   },
   errorContainer: {
@@ -635,53 +530,24 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    height: '60vh',
+    height: '50vh',
     padding: '20px',
     textAlign: 'center',
   },
   errorIcon: {
-    fontSize: '48px',
+    fontSize: '40px',
     marginBottom: '16px',
   },
   errorText: {
-    color: '#EF4444',
-    fontSize: '18px',
+    color: '#e53e3e',
+    fontSize: '16px',
     fontWeight: '600',
     margin: '0 0 8px 0',
   },
   errorSubtext: {
-    color: '#6B7280',
+    color: '#718096',
     fontSize: '14px',
     margin: '0',
-  },
-  '@media (max-width: 768px)': {
-    container: {
-      padding: '15px',
-    },
-    mainTitle: {
-      fontSize: '2.2rem',
-    },
-    subtitle: {
-      fontSize: '1rem',
-    },
-    tabContainer: {
-      flexDirection: 'column',
-      alignItems: 'center',
-    },
-    tab: {
-      width: '100%',
-      maxWidth: '280px',
-      justifyContent: 'center',
-    },
-    section: {
-      padding: '24px 16px',
-    },
-    list: {
-      gridTemplateColumns: '1fr',
-    },
-    card: {
-      padding: '20px',
-    },
   },
 };
 
@@ -694,6 +560,65 @@ if (typeof document !== 'undefined') {
       100% { transform: rotate(360deg); }
     }
   `, styleSheet.cssRules.length);
+}
+
+// Media queries for responsiveness
+const mediaQueries = `
+  @media (max-width: 768px) {
+    .container {
+      padding: 12px;
+    }
+    
+    .header {
+      padding: 24px 12px 12px;
+      margin-bottom: 24px;
+    }
+    
+    .section {
+      padding: 20px 16px;
+      margin-bottom: 20px;
+    }
+    
+    .list {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    
+    .card {
+      padding: 16px;
+    }
+    
+    .tab {
+      padding: 10px 16px;
+      font-size: 13px;
+      min-width: 70px;
+    }
+    
+    .section-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .tab-container {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .tab {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+  }
+`;
+
+// Add media queries to the document
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = mediaQueries;
+  document.head.appendChild(style);
 }
 
 export default ToppersWall;

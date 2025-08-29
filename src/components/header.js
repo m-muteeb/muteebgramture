@@ -61,6 +61,9 @@ export default function Header() {
           <Link to="/">Home</Link>
           <Link to="/about">About</Link>
               <Link to="/discussionfourm">Discussion</Link>
+                 <Link to="/ourproud" >Achievers' Wall</Link>
+
+
 
           {/* Sections Dropdown (Desktop) */}
           <div
@@ -108,6 +111,8 @@ export default function Header() {
           <Link to="/" onClick={handleLinkClick}>Home</Link>
           <Link to="/about" onClick={handleLinkClick}>About Us</Link>
  <Link to="/discussionfourm" onClick={handleLinkClick}>Discussion</Link>
+  <Link to="/ourproud" onClick={handleLinkClick}>Achievers' Wall</Link>
+
 
           {/* Sections Dropdown (Mobile) */}
           <div className="mobile-dropdown">

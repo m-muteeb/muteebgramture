@@ -1,7 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { fireStore } from "../../config/firebase";
 import { collection, getDocs } from "firebase/firestore";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { app } from '../../config/firebase';
 import CertificateGenerator from "../CertificateGenerator"; // Adjust path as needed
 import { motion } from "framer-motion"; // For animations
 
@@ -22,6 +25,7 @@ const stripHtml = (html) => {
 };
 
 const MCQList = () => {
+  const auth = getAuth(app);
   const { subCategory, topicSlug } = useParams();
   const [mcqs, setMcqs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,10 +33,17 @@ const MCQList = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [userName, setUserName] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
   const [skippedQuestions, setSkippedQuestions] = useState(new Set());
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const loadMCQs = async () => {
@@ -125,13 +136,6 @@ const MCQList = () => {
   const handleShowResults = () => {
     setShowResults(true);
     setShowCertificate(false);
-  };
-
-  const handleGenerateCertificate = () => {
-    if (userName.trim()) {
-      setShowCertificate(true);
-      setShowResults(false);
-    }
   };
 
   const formatTime = (seconds) => {
@@ -238,12 +242,13 @@ const MCQList = () => {
           <h2 style={styles.resultTitle}>Quiz Completed!</h2>
           <p style={styles.resultText}>You scored {score} out of {mcqs.length} ({percentage}%)</p>
           <p style={styles.resultText}>Time Taken: {formatTime(timeLeft)}</p>
-          <div style={styles.nameInput}>
-            <input type="text" placeholder="Enter your full name for certificate" value={userName} onChange={(e) => setUserName(e.target.value)} style={styles.input} />
-          </div>
           <div style={styles.buttonGroup}>
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={{ ...styles.submitBtn, opacity: !userName.trim() ? 0.5 : 1, cursor: !userName.trim() ? "not-allowed" : "pointer" }} onClick={handleGenerateCertificate} disabled={!userName.trim()}>Generate Certificate</motion.button>
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.submitBtn} onClick={handleShowResults}>View Detailed Results</motion.button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.submitBtn} onClick={handleShowResults}>
+              View Correct Answers
+            </motion.button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} style={styles.submitBtn} onClick={() => setShowCertificate(true)}>
+              {user ? "Generate Certificate" : "Login to Generate Certificate"}
+            </motion.button>
           </div>
         </motion.div>
       )}
@@ -279,11 +284,8 @@ const MCQList = () => {
         <CertificateGenerator
           mcqs={mcqs}
           selectedAnswer={answers}
-          userName={userName}
           calculateResults={calculateResults}
           topicName={topicSlug.replace(/-/g, " ")}
-          percentage={percentage}
-          timeTaken={formatTime(timeLeft)}
           onShowResults={handleShowResults}
         />
       )}
