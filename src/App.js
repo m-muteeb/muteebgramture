@@ -18,6 +18,7 @@ import Faqs from './components/faqs';
 import PrivacyPolicy from './components/privacypolicy';
 import ManageProducts from './pages/Admin-Dashboard/ManageContent';
 import TopicsSectionsPage from "./components/SectionsTopicsPage"
+import DiscussionFourm from './components/DiscussionFourm';
 
 function HomePage() {
   return (
@@ -56,6 +57,7 @@ function App() {
           <Route path="/notes/:selectedClass/:category/:subcategory" element={<Notes />} />
           <Route path="/gramturestore" element={<Gramturestore />} />
            <Route path="/sections/:section" element={<TopicsSectionsPage/>} />
+              <Route path="/discussionfourm" element={<DiscussionFourm/>} />
         </Routes>
 
         {/* <Routes>

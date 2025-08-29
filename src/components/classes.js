@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../assets/css/classes.css';
-import class9 from '../assets/images/9 class.jpg';
+import class9 from '../assets/images/class 9.png';
 import class10 from '../assets/images/class 10.png';
 import class11 from '../assets/images/class 11.png';
 import class12 from '../assets/images/class 12.png';
-import grammar from '../assets/images/grammar.jpg';
+import grammar from '../assets/images/grammar.png';
 
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { fireStore } from '../config/firebase';
@@ -99,6 +99,9 @@ const FeaturedClasses = () => {
           <p className="description">
             Explore expertly crafted courses, tailored content, and interactive tools to empower your learning journey online.
             Unlock your potential with immersive lessons, real-world applications, and a community that grows with you.
+          </p>
+           <p className="description text-center text-danger">
+            Click here to explore notes, past papers, guess papers, and MCQ tests for each class.
           </p>
         </div>
 

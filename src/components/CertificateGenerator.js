@@ -16,6 +16,7 @@ const CertificateGenerator = ({
   const [certificateData, setCertificateData] = useState({});
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [bgLoaded, setBgLoaded] = useState(false);
+  const [certificateGenerated, setCertificateGenerated] = useState(false);
 
   // Preload background image for reliable capture
   useEffect(() => {
@@ -30,12 +31,23 @@ const CertificateGenerator = ({
     };
   }, []);
 
-  // Automatically generate certificate when userName is provided
+  // Check if certificate was already generated for this user and topic
   useEffect(() => {
-    if (userName && bgLoaded) {
+    if (userName && topicName) {
+      const storageKey = `certificate_${userName}_${topicName}`;
+      const alreadyGenerated = localStorage.getItem(storageKey);
+      if (alreadyGenerated === "true") {
+        setCertificateGenerated(true);
+      }
+    }
+  }, [userName, topicName]);
+
+  // Automatically generate certificate when userName is provided (only once)
+  useEffect(() => {
+    if (userName && bgLoaded && !certificateGenerated) {
       generateCertificate();
     }
-  }, [userName, bgLoaded]);
+  }, [userName, bgLoaded, certificateGenerated]);
 
   const generateCertificate = () => {
     const correctAnswers = calculateResults();
@@ -44,13 +56,18 @@ const CertificateGenerator = ({
       score >= 80 ? "Excellent" : score >= 50 ? "Good" : "Needs Improvement";
 
     setCertificateData({
-      topic: topicName,
+      topic: topicName.toUpperCase(), // Convert topic to uppercase
       score: correctAnswers,
       complement,
       userName,
     });
 
     setIsCertificateVisible(true);
+    
+    // Mark certificate as generated for this user and topic
+    const storageKey = `certificate_${userName}_${topicName}`;
+    localStorage.setItem(storageKey, "true");
+    setCertificateGenerated(true);
   };
 
   const handleDownloadCertificate = () => {
@@ -58,7 +75,7 @@ const CertificateGenerator = ({
 
     // Hide buttons before capturing the certificate
     const footer = document.querySelector("#certificate-footer");
-    footer.style.display = "none";
+    if (footer) footer.style.display = "none";
 
     html2canvas(certificateElement, { 
       useCORS: true, 
@@ -74,10 +91,10 @@ const CertificateGenerator = ({
       setIsDownloaded(true);
 
       // Show the footer again after the image is downloaded
-      footer.style.display = "flex";
+      if (footer) footer.style.display = "flex";
     }).catch((error) => {
       console.error("Error capturing certificate:", error);
-      footer.style.display = "flex"; // Ensure footer is restored on error
+      if (footer) footer.style.display = "flex"; // Ensure footer is restored on error
     });
   };
 
@@ -97,11 +114,11 @@ const CertificateGenerator = ({
             </div>
             <div style={certificateStyles.body}>
               <h1 style={certificateStyles.userName}>{certificateData.userName}</h1>
-              <p>Has successfully completed the course of</p>
+              <p style={certificateStyles.bodyText}>Has successfully completed the course of</p>
               <h3 style={certificateStyles.topic}>{certificateData.topic}</h3>
-              <p>with a score of <strong>{certificateData.score}</strong> out of {mcqs.length}</p>
-              <p>Evaluation: <strong>{certificateData.complement}</strong></p>
-              <p style={{ marginTop: '20px' }}>
+              <p style={certificateStyles.bodyText}>with a score of <strong>{certificateData.score}</strong> out of {mcqs.length}</p>
+              <p style={certificateStyles.bodyText}>Evaluation: <strong>{certificateData.complement}</strong></p>
+              <p style={certificateStyles.issueDate}>
                 Issued on: <strong>{new Date().toLocaleDateString()}</strong>
               </p>
             </div>
@@ -118,6 +135,14 @@ const CertificateGenerator = ({
           </div>
         </div>
       )}
+      
+      {certificateGenerated && !isCertificateVisible && (
+        <div style={certificateStyles.alreadyGeneratedMessage}>
+          <h3>Certificate Already Generated</h3>
+          <p>You have already generated a certificate for this test. 
+             Please take the test again to generate a new certificate.</p>
+        </div>
+      )}
     </div>
   );
 };
@@ -126,13 +151,15 @@ const certificateStyles = {
   certificate: {
     maxWidth: "800px",
     margin: "20px auto",
-    padding: "40px",
-    border: "2px solid gold",
-    borderRadius: "10px",
+    padding: "60px 40px",
+    border: "3px double #D4AF37",
+    borderRadius: "15px",
     textAlign: "center",
-    fontFamily: "'Times New Roman', serif",
+    fontFamily: "'Playfair Display', 'Times New Roman', serif",
     position: "relative",
     overflow: "hidden",
+    background: "linear-gradient(to bottom, #f9f2e8, #faf5ef)",
+    boxShadow: "0 15px 35px rgba(0,0,0,0.15)",
   },
   backgroundImage: {
     position: "absolute",
@@ -142,54 +169,103 @@ const certificateStyles = {
     height: "100%",
     objectFit: "cover",
     zIndex: 0,
+    opacity: 0.95,
   },
   content: {
     position: "relative",
     zIndex: 1,
-  
-    padding: "20px",
-    borderRadius: "5px",
+    padding: "30px",
+    borderRadius: "8px",
   },
   header: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+    marginBottom: "30px",
   },
   logo: {
-    width: "100px",
-    marginBottom: "10px",
+    width: "120px",
+    marginBottom: "15px",
     zIndex: 1,
+    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))",
   },
   title: {
-    fontSize: "24px",
-    marginBottom: "20px",
-  },
-  body: {
-    margin: "20px 0",
-  },
-  userName: {
     fontSize: "36px",
     marginBottom: "10px",
+    fontFamily: "'Cormorant Garamond', serif",
+    fontWeight: 700,
+    color: "#1a472a",
+    letterSpacing: "3px",
+    textTransform: "uppercase",
+    textShadow: "1px 1px 2px rgba(0,0,0,0.1)",
+  },
+  body: {
+    margin: "30px 0",
+  },
+  bodyText: {
+    fontFamily: "'Crimson Text', serif",
+    fontSize: "20px",
+    lineHeight: "1.6",
+    color: "#2c3e50",
+    margin: "15px 0",
+  },
+  userName: {
+    fontSize: "48px",
+    marginBottom: "20px",
+    fontFamily: "'Great Vibes', cursive",
+    fontWeight: 400,
+    color: "#8b4513",
+    textShadow: "2px 2px 3px rgba(0,0,0,0.1)",
   },
   topic: {
-    color: "#16a085",
+    color: "#1a472a",
     fontWeight: 700,
-    fontSize: "36px",
-    margin: "10px 0",
+    fontSize: "38px",
+    margin: "20px 0",
+    fontFamily: "'Cinzel', serif",
+    textTransform: "uppercase",
+    letterSpacing: "2px",
+    textShadow: "1px 1px 2px rgba(0,0,0,0.1)",
+    padding: "10px",
+    borderTop: "2px solid #D4AF37",
+    borderBottom: "2px solid #D4AF37",
+  },
+  issueDate: {
+    fontFamily: "'Crimson Text', serif",
+    fontSize: "18px",
+    color: "#2c3e50",
+    marginTop: "25px",
+    fontStyle: "italic",
   },
   footer: {
-    marginTop: "20px",
+    marginTop: "40px",
     display: "flex",
     justifyContent: "center",
-    gap: "20px",
+    gap: "25px",
   },
   downloadBtn: {
-    padding: "10px 20px",
-    backgroundColor: "#1d72b8",
+    padding: "14px 28px",
+    backgroundColor: "#1a472a",
     color: "#fff",
     border: "none",
-    borderRadius: "5px",
+    borderRadius: "6px",
     cursor: "pointer",
+    fontFamily: "'Crimson Text', serif",
+    fontSize: "18px",
+    fontWeight: 600,
+    letterSpacing: "0.8px",
+    transition: "all 0.3s ease",
+    boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
+  },
+  alreadyGeneratedMessage: {
+    maxWidth: "600px",
+    margin: "30px auto",
+    padding: "20px",
+    backgroundColor: "#f8f9fa",
+    border: "1px solid #dee2e6",
+    borderRadius: "8px",
+    textAlign: "center",
+    fontFamily: "'Crimson Text', serif",
   },
 };
 

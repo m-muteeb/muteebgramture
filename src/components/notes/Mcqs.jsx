@@ -431,6 +431,7 @@ const styles = {
     fontWeight: "600",
     cursor: "pointer",
     transition: "all 0.2s ease",
+    marginTop: "30px",
   },
   resultBox: {
     background: "#fff",
