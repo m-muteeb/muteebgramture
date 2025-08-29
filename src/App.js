@@ -19,6 +19,7 @@ import PrivacyPolicy from './components/privacypolicy';
 import ManageProducts from './pages/Admin-Dashboard/ManageContent';
 import TopicsSectionsPage from "./components/SectionsTopicsPage"
 import DiscussionFourm from './components/DiscussionFourm';
+import Ourproud from './components/Topperswall';
 
 function HomePage() {
   return (
@@ -58,6 +59,8 @@ function App() {
           <Route path="/gramturestore" element={<Gramturestore />} />
            <Route path="/sections/:section" element={<TopicsSectionsPage/>} />
               <Route path="/discussionfourm" element={<DiscussionFourm/>} />
+                <Route path="/ourproud" element={<Ourproud/>} />
+              
         </Routes>
 
         {/* <Routes>
