@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { fireStore } from "../../config/firebase";
-import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 // 🔹 Normalize for case-insensitive matching
 const normalize = (str) =>
@@ -19,19 +19,13 @@ const Notes = () => {
   const { selectedClass, subCategory } = useParams();
   const navigate = useNavigate();
 
-  const [subCategories, setSubCategories] = useState([]);
-  const [topics, setTopics] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [openSubCatId, setOpenSubCatId] = useState(null);
-  const [fetchedOnce, setFetchedOnce] = useState(false);
-
-  // Hardcoded categories
+  // Hardcoded categories only
   const grammarOnly = [
     "Letters",
     "Stories",
     "Applications",
     "Translations",
-    "Condtitional Sentences",
+    "Conditional Sentences",
     "Tenses",
     "MCQ Test",
     "Idioms",
@@ -39,10 +33,21 @@ const Notes = () => {
   ];
   const commonHardcoded = ["Past Papers", "Guess Paper", "Book Lessons", "MCQ Test"];
 
+  const [subCategories, setSubCategories] = useState([]);
+  const [topics, setTopics] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [openSubCatId, setOpenSubCatId] = useState(null);
+
   useEffect(() => {
     window.scrollTo(0, 0);
-    fetchSubCategories();
-  }, []);
+    
+    // Set subcategories based on selected class
+    if (normalize(selectedClass) === "grammar") {
+      setSubCategories(grammarOnly);
+    } else {
+      setSubCategories(commonHardcoded);
+    }
+  }, [selectedClass]);
 
   useEffect(() => {
     if (subCategory && subCategories.length > 0) {
@@ -55,35 +60,6 @@ const Notes = () => {
       }
     }
   }, [subCategory, subCategories]);
-
-  // 🔹 Fetch subcategories
-  const fetchSubCategories = async () => {
-    try {
-      if (normalize(selectedClass) === "grammar") {
-        setSubCategories(grammarOnly);
-        return;
-      }
-
-      setSubCategories(commonHardcoded);
-
-      if (!fetchedOnce) {
-        setLoading(true);
-
-        const snapshot = await getDocs(collection(fireStore, "subcategories"));
-        let subs = snapshot.docs.map((doc) => doc.data().name);
-
-        subs = subs.filter((name) => !grammarOnly.includes(name));
-
-        setSubCategories((prev) => [...prev, ...subs]);
-
-        setFetchedOnce(true);
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error("Error fetching subcategories:", error);
-      setLoading(false);
-    }
-  };
 
   // 🔹 Subscribe to topics in realtime
   const subscribeToTopics = (subCatName) => {
