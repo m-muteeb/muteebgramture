@@ -25,6 +25,7 @@ export default function Description() {
   const [loading, setLoading] = useState(true);
   const [allTopics, setAllTopics] = useState([]);
   const [currentTopicIndex, setCurrentTopicIndex] = useState(null);
+  const [filteredTopics, setFilteredTopics] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -36,7 +37,13 @@ export default function Description() {
         const topicsList = await fetchAllTopics(subCategory);
         setAllTopics(topicsList);
 
-        const currentTopicIdx = topicsList.findIndex(
+        // Filter topics to only include those with the same subCategory
+        const sameSubCategoryTopics = topicsList.filter(
+          (topic) => topic.subCategory === subCategory
+        );
+        setFilteredTopics(sameSubCategoryTopics);
+
+        const currentTopicIdx = sameSubCategoryTopics.findIndex(
           (topic) => topic.id === topicSlug || topic.slug === topicSlug
         );
         setCurrentTopicIndex(currentTopicIdx);
@@ -108,35 +115,31 @@ export default function Description() {
 
           {/* Navigation */}
           <div className="topic-navigation">
-            {getPrevTopic(allTopics, currentTopicIndex) &&
-              getPrevTopic(allTopics, currentTopicIndex).subCategory ===
-                subCategory && (
-                <Link
-                  to={`/description/${subCategory}/${
-                    getPrevTopic(allTopics, currentTopicIndex).slug
-                  }`}
-                  className="prev-button"
-                  onClick={() => window.scrollTo(0, 0)}
-                >
-                  <FaChevronLeft className="nav-icon" /> Previous Topic:{" "}
-                  {getPrevTopic(allTopics, currentTopicIndex).topic}
-                </Link>
-              )}
+            {getPrevTopic(filteredTopics, currentTopicIndex) && (
+              <Link
+                to={`/description/${subCategory}/${
+                  getPrevTopic(filteredTopics, currentTopicIndex).slug
+                }`}
+                className="prev-button"
+                onClick={() => window.scrollTo(0, 0)}
+              >
+                <FaChevronLeft className="nav-icon" /> Previous Topic:{" "}
+                {getPrevTopic(filteredTopics, currentTopicIndex).topic}
+              </Link>
+            )}
 
-            {getNextTopic(allTopics, currentTopicIndex) &&
-              getNextTopic(allTopics, currentTopicIndex).subCategory ===
-                subCategory && (
-                <Link
-                  to={`/description/${subCategory}/${
-                    getNextTopic(allTopics, currentTopicIndex).slug
-                  }`}
-                  className="next-button"
-                  onClick={() => window.scrollTo(0, 0)}
-                >
-                  Next Topic: {getNextTopic(allTopics, currentTopicIndex).topic}{" "}
-                  <FaChevronRight className="nav-icon" />
-                </Link>
-              )}
+            {getNextTopic(filteredTopics, currentTopicIndex) && (
+              <Link
+                to={`/description/${subCategory}/${
+                  getNextTopic(filteredTopics, currentTopicIndex).slug
+                }`}
+                className="next-button"
+                onClick={() => window.scrollTo(0, 0)}
+              >
+                Next Topic: {getNextTopic(filteredTopics, currentTopicIndex).topic}{" "}
+                <FaChevronRight className="nav-icon" />
+              </Link>
+            )}
           </div>
 
           {/* Comments */}
