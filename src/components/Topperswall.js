@@ -274,7 +274,7 @@ const styles = {
     color: '#1a202c',
     margin: '0 0 8px 0',
     letterSpacing: '-0.5px',
-    marginTop: '20px'
+    marginTop: '50px'
   },
   titleUnderline: {
     height: '3px',

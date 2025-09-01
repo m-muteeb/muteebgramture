@@ -17,7 +17,7 @@ const About = () => {
       <Row className="align-items-center my-5">
         <Col xs={24} md={16}>
           <div className="about-grammar-content pe-md-4">
-            <h2 className="text-center fw-bold mb-4 mt-4">Welcome to the Gramture Platform!</h2>
+            <h2 className="text-center fw-bold mt-5">Welcome to the Gramture Platform!</h2>
             <div className="gramture-desc">
             <p>
               Gramture is a revolutionary platform designed to make learning grammar and language structures simpler and more approachable. Whether you're a student, teacher, or lifelong learner, our platform offers a wide range of resources that aim to enhance your understanding of grammar in an easy-to-understand way.

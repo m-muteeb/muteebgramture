@@ -171,7 +171,7 @@ const DiscussionForum = () => {
         {/* Header */}
         <div className="forum-header">
           <h1 className="forum-title">
-            <span className="forum-icon"></span> Gramture Discussion Forum
+            <span className="forum-icon mt-5"></span> Gramture Discussion Forum
           </h1>
           <p className="forum-description">
             Ask questions, share knowledge, and grow together with our language learning community! 🌱

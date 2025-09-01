@@ -94,7 +94,7 @@ export default function Header() {
         <div className="right-section">
          
             <Link to="/gramturestore">
-              <button className="sign-in-btn">Gramture Store</button>
+              <button className="sign-in-btn " onClick={handleLinkClick}>Gramture Store</button>
             </Link>
           
         </div>
@@ -139,7 +139,7 @@ export default function Header() {
           <Link to="/contact" onClick={handleLinkClick}>Contact Us</Link>
 
                     <Link to="/gramturestore">
-              <button className="sign-in-btn">Gramture Store</button>
+              <button className="sign-in-btn" onClick={handleLinkClick}>Gramture Store</button>
             </Link>
         </div>
       )}
