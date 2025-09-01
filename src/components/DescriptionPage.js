@@ -130,7 +130,7 @@ export default function Description() {
           />
 
           {/* Title */}
-          <h1 className="topic-title">{products[0].topic}</h1>
+          <h1 className="topic-title mt-5">{products[0].topic}</h1>
 
           {/* Description */}
           {products.map((product) => (

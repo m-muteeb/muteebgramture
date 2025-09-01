@@ -838,7 +838,7 @@ const AddContent = () => {
             <Button
               type="default"
               block
-              onClick={() => navigate("/ManageProducts")}
+              onClick={() => navigate("/managecontent")}
             >
               Manage Topics
             </Button>

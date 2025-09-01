@@ -35,6 +35,10 @@ const DiscussionForum = () => {
     fetchQuestions();
   }, []);
 
+    useEffect(() => {
+          window.scrollTo(0, 0);
+      }, []);
+
   const submitQuestion = async () => {
     if (question && name && email && topic) {
       setLoading(true);
@@ -170,7 +174,7 @@ const DiscussionForum = () => {
       <div className="forum-content">
         {/* Header */}
         <div className="forum-header">
-          <h1 className="forum-title">
+          <h1 className="forum-title mt-4">
             <span className="forum-icon mt-5"></span> Gramture Discussion Forum
           </h1>
           <p className="forum-description">

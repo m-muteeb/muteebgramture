@@ -144,10 +144,10 @@ const GramtureStore = () => {
   };
 
   return (
-    <div className="store-container" style={{ marginTop: '50px' }}>
+    <div className="store-container mt-5" style={{ marginTop: '50px' }}>
       {/* Moving Headline Banner */}
       <div className="headline-banner mt-5">
-        <div className="headline-container mt-2">
+        <div className="headline-container mt-5">
           <div className="headline-text mt-1" key={currentHeadline}>
             {headlines[currentHeadline]}
           </div>

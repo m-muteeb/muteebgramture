@@ -9,9 +9,9 @@ const ContactSection = () => {
       }, []);
 
   return (
-    <div className="container contactForm">
+    <div className="container contactForm mt-5">
       <div className="row">
-        <div className="col-md-6 mt-3">
+        <div className="col-md-6 mt-5">
           <h1 style={{ fontFamily: "Playfair-Display", fontSize: "35px" }}>How To Find Us</h1>
           <p className="mt-4 text-dark" style={{ color: "#767676" }}>
           Get in touch to explore how we can support your learning journey. Whether you have questions about our programs, just want to learn more, feel free to give us a call, send us an email, or fill out the contact form — we’re here to help.

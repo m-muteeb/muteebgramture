@@ -5,6 +5,8 @@ import logo from "../assets/images/navbarlogo.webp";
 import "../assets/css/footer.css";
 
 const Footer = () => {
+
+  
   const year = new Date().getFullYear();
   return (
     <>
@@ -68,8 +70,8 @@ const Footer = () => {
                   }}
                 />
                 <p>
-                  <Link to="/notes/${selectedClass}/${subjectName.toLowerCase()}/${type}" className="text-dark" style={{ textDecoration: "none" }}>
-                    Notes
+                  <Link to="/discussionfourm" className="text-dark" style={{ textDecoration: "none" }}>
+                    Discussion Forum
                   </Link>
                 </p>
                 <p>
@@ -101,8 +103,8 @@ const Footer = () => {
                   </Link>
                 </p>
                 <p>
-                  <Link to="/institutionpage" className="text-dark" style={{ textDecoration: "none" }}>
-                    MCQS
+                  <Link to="/ourproud" className="text-dark" style={{ textDecoration: "none" }}>
+                    Achiever's Wall
                   </Link>
                 </p>
                 <p>

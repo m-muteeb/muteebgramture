@@ -9,7 +9,9 @@ import "../assets/css/about.css";
 
 const About = () => {
 
-
+    useEffect(() => {
+          window.scrollTo(0, 0);
+      }, []);
 
   return (
     <div className='container about-sect' id='about'>

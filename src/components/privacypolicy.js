@@ -12,9 +12,13 @@ const PrivacyPolicy = () => {
     setLastUpdatedDate(formattedDate);
   }, []);
 
+    useEffect(() => {
+          window.scrollTo(0, 0);
+      }, []);
+
   return (
-    <Container className="privacy-policy my-5 p-4 rounded">
-      <h1 className="text-center mb-4">Privacy Policy</h1>
+    <Container className="privacy-policy my-5 p-4 rounded mt-5">
+      <h1 className="text-center mb-4 mt-5">Privacy Policy</h1>
       <p>
         At <strong>Gramture</strong>, the privacy of our visitors is of utmost importance to us. 
         This <strong>Privacy Policy</strong> outlines the types of personal information 

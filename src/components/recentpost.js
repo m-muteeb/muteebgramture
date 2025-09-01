@@ -1,9 +1,14 @@
-import React, { memo } from 'react';
+import React, { memo , useEffect } from 'react';
 import { Col, Card } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
 export const RecentPostCard = memo(({ post }) => {
+
+    useEffect(() => {
+          window.scrollTo(0, 0);
+      }, []); 
+
   return (
     <Col xs={12} sm={6} md={4} lg={4} className="mb-4">
       <Link

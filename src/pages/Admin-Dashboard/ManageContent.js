@@ -69,6 +69,10 @@ const ManageProducts = () => {
     }, 300)
   );
 
+   useEffect(() => {
+          window.scrollTo(0, 0);
+      }, []);
+
   useEffect(() => {
     fetchProducts();
     fetchClasses();
@@ -339,10 +343,10 @@ const ManageProducts = () => {
     return mcqs.map((mcq, index) => (
       <Card
         key={index}
-        style={{ marginBottom: 16, border: "1px solid #f0f0f0" }}
+        style={{ marginBottom: 16, border: "1px solid #f0f0f0", marginTop: 16 }}
         size="small"
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 , marginTop: 16 }}>
           <h4>MCQ {index + 1}</h4>
           <Button
             type="link"

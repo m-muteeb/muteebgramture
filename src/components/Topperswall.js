@@ -3,6 +3,11 @@ import { getFirestore, collection, getDocs, orderBy, query } from 'firebase/fire
 import { app } from '../config/firebase';
 
 const ToppersWall = () => {
+
+  useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
   const db = getFirestore(app);
   const [toppers, setToppers] = useState({
     daily: [],
