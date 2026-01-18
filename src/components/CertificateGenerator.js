@@ -245,7 +245,7 @@ const CertificateGenerator = ({
             />
             <input
               type="password"
-              placeholder="Password"
+              placeholder="Password for gramture"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={modalStyles.input}

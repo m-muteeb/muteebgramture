@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, orderBy, query, updateDoc, doc, addDoc, serverTimestamp, arrayUnion, increment } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { app } from '../config/firebase';
+import LoginRegisterPage from './LoginRegister';
 
 const ToppersWall = () => {
 
   useEffect(() => {
-        window.scrollTo(0, 0);
-    }, []);
+    window.scrollTo(0, 0);
+  }, []);
 
   const db = getFirestore(app);
+  const auth = getAuth(app);
   const [toppers, setToppers] = useState({
     daily: [],
     weekly: [],
@@ -17,6 +20,15 @@ const ToppersWall = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('daily');
+  const [user, setUser] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchToppers = async () => {
@@ -29,7 +41,10 @@ const ToppersWall = () => {
         const toppersSnapshot = await getDocs(toppersQuery);
         const allToppers = toppersSnapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
+          likes: doc.data().likes || 0,
+          likedBy: doc.data().likedBy || [],
+          commentCount: doc.data().commentCount || 0
         }));
         
         const now = new Date();
@@ -68,6 +83,17 @@ const ToppersWall = () => {
     fetchToppers();
   }, []);
 
+  const updateTopper = (topperId, updates) => {
+    setToppers(prev => {
+      const updateCat = cat => cat.map(t => t.id === topperId ? { ...t, ...updates } : t);
+      return {
+        daily: updateCat(prev.daily),
+        weekly: updateCat(prev.weekly),
+        monthly: updateCat(prev.monthly)
+      };
+    });
+  };
+
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
@@ -95,6 +121,17 @@ const ToppersWall = () => {
           <div style={styles.titleUnderline}></div>
         </div>
         <p style={styles.subtitle}>Celebrating outstanding achievements and academic success</p>
+        <div style={styles.authContainer}>
+          {user ? (
+            <button onClick={() => signOut(auth)} style={styles.logoutButton}>
+              Logout
+            </button>
+          ) : (
+            <button onClick={() => setShowModal(true)} style={styles.loginButton}>
+              Login 
+            </button>
+          )}
+        </div>
       </div>
       
       <div style={styles.tabContainer}>
@@ -118,12 +155,28 @@ const ToppersWall = () => {
         </button>
       </div>
 
+      <div style={styles.authBelowTabs}>
+        {user ? (
+          <button onClick={() => signOut(auth)} style={styles.logoutButton}>
+            Logout
+          </button>
+        ) : (
+          <button onClick={() => setShowModal(true)} style={styles.loginButton}>
+            Login to become part of Gramture
+          </button>
+        )}
+      </div>
+
       <div style={styles.content}>
         {activeTab === 'daily' && (
           <TopperSection 
             toppers={toppers.daily} 
             title="Today's Top Performers" 
             period="daily" 
+            user={user}
+            setShowModal={setShowModal}
+            updateTopper={updateTopper}
+            db={db}
           />
         )}
         {activeTab === 'weekly' && (
@@ -131,6 +184,10 @@ const ToppersWall = () => {
             toppers={toppers.weekly} 
             title="This Week's Achievers" 
             period="weekly" 
+            user={user}
+            setShowModal={setShowModal}
+            updateTopper={updateTopper}
+            db={db}
           />
         )}
         {activeTab === 'monthly' && (
@@ -138,14 +195,26 @@ const ToppersWall = () => {
             toppers={toppers.monthly} 
             title="Monthly Excellence" 
             period="monthly" 
+            user={user}
+            setShowModal={setShowModal}
+            updateTopper={updateTopper}
+            db={db}
           />
         )}
       </div>
+
+      {showModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowModal(false)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <LoginRegisterPage onClose={() => setShowModal(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-const TopperSection = ({ toppers, title, period }) => {
+const TopperSection = ({ toppers, title, period, user, setShowModal, updateTopper, db }) => {
   return (
     <section style={styles.section}>
       <div style={styles.sectionHeader}>
@@ -154,12 +223,12 @@ const TopperSection = ({ toppers, title, period }) => {
           {toppers.length} {toppers.length === 1 ? 'Student' : 'Students'}
         </div>
       </div>
-      <TopperList toppers={toppers} period={period} />
+      <TopperList toppers={toppers} period={period} user={user} setShowModal={setShowModal} updateTopper={updateTopper} db={db} />
     </section>
   );
 };
 
-const TopperList = ({ toppers, period }) => {
+const TopperList = ({ toppers, period, user, setShowModal, updateTopper, db }) => {
   if (toppers.length === 0) {
     return (
       <div style={styles.emptyState}>
@@ -173,14 +242,27 @@ const TopperList = ({ toppers, period }) => {
   return (
     <div style={styles.list}>
       {toppers.map((topper, index) => (
-        <TopperCard key={topper.id} topper={topper} rank={index + 1} period={period} />
+        <TopperCard 
+          key={topper.id} 
+          topper={topper} 
+          rank={index + 1} 
+          period={period} 
+          user={user} 
+          setShowModal={setShowModal} 
+          updateTopper={updateTopper} 
+          db={db} 
+        />
       ))}
     </div>
   );
 };
 
-const TopperCard = ({ topper, rank, period }) => {
+const TopperCard = ({ topper, rank, period, user, setShowModal, updateTopper, db }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
 
   const getRankStyle = (rank) => {
     if (rank === 1) return styles.goldRank;
@@ -190,14 +272,77 @@ const TopperCard = ({ topper, rank, period }) => {
   };
 
   const getRankIcon = (rank) => {
-    if (rank === 1) return { emoji: '1st', label: 'First Place' };
-    if (rank === 2) return { emoji: '2nd', label: 'Second Place' };
-    if (rank === 3) return { emoji: '3rd', label: 'Third Place' };
-    return { emoji: `${rank}th`, label: `Rank ${rank}` };
+    if (rank === 1) return { emoji: '🥇', label: 'First Place' };
+    if (rank === 2) return { emoji: '🥈', label: 'Second Place' };
+    if (rank === 3) return { emoji: '🥉', label: 'Third Place' };
+    return { emoji: rank, label: `Rank ${rank}` };
   };
 
   const rankInfo = getRankIcon(rank);
   const accuracy = topper.totalQuestions ? Math.round((topper.score / topper.totalQuestions) * 100) : 0;
+  const isLiked = user && topper.likedBy.includes(user.uid);
+
+  useEffect(() => {
+    if (showComments) {
+      fetchComments();
+    }
+  }, [showComments]);
+
+  const fetchComments = async () => {
+    setLoadingComments(true);
+    try {
+      const commentsQuery = query(
+        collection(db, `toppers/${topper.id}/comments`),
+        orderBy('timestamp', 'desc')
+      );
+      const commentsSnapshot = await getDocs(commentsQuery);
+      setComments(commentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (err) {
+      console.error("Error fetching comments: ", err);
+    }
+    setLoadingComments(false);
+  };
+
+  const handleLike = async () => {
+    if (!user) {
+      setShowModal(true);
+      return;
+    }
+    if (isLiked) return; // Assuming no unlike, as per original
+    try {
+      const topperRef = doc(db, 'toppers', topper.id);
+      await updateDoc(topperRef, {
+        likes: increment(1),
+        likedBy: arrayUnion(user.uid)
+      });
+      updateTopper(topper.id, {
+        likes: topper.likes + 1,
+        likedBy: [...topper.likedBy, user.uid]
+      });
+    } catch (err) {
+      console.error("Error liking topper: ", err);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!commentText || !user) return;
+    try {
+      const commentRef = await addDoc(collection(db, `toppers/${topper.id}/comments`), {
+        text: commentText,
+        userName: user.displayName || user.email.split('@')[0],
+        uid: user.uid,
+        timestamp: serverTimestamp()
+      });
+      await updateDoc(doc(db, 'toppers', topper.id), {
+        commentCount: increment(1)
+      });
+      updateTopper(topper.id, { commentCount: topper.commentCount + 1 });
+      setCommentText('');
+      fetchComments();
+    } catch (err) {
+      console.error("Error adding comment: ", err);
+    }
+  };
 
   return (
     <div 
@@ -243,6 +388,99 @@ const TopperCard = ({ topper, rank, period }) => {
         <div style={styles.attemptsContainer}>
           <span style={styles.attemptsText}>{topper.totalAttempts || 1} attempt{topper.totalAttempts !== 1 ? 's' : ''}</span>
         </div>
+
+        <div style={styles.interactionsContainer}>
+          <div style={styles.actionButtons}>
+            <button 
+              style={{
+                ...styles.likeButton,
+                ...(isLiked ? styles.likedButton : {})
+              }} 
+              onClick={handleLike}
+              disabled={isLiked}
+            >
+              <span style={styles.buttonIcon}>👍</span>
+              <span style={styles.buttonCount}>{topper.likes}</span>
+            </button>
+            <button 
+              style={styles.commentButton} 
+              onClick={() => setShowComments(!showComments)}
+            >
+              <span style={styles.buttonIcon}>💬</span>
+              <span style={styles.buttonCount}>{topper.commentCount}</span>
+            </button>
+          </div>
+        </div>
+
+        {showComments && (
+          <div style={styles.commentsSection}>
+            <div style={styles.commentsHeader}>
+              <h4 style={styles.commentsTitle}>Comments</h4>
+              <button 
+                style={styles.closeCommentsButton}
+                onClick={() => setShowComments(false)}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={styles.commentsList}>
+              {loadingComments ? (
+                <div style={styles.loadingCommentsContainer}>
+                  <div style={styles.smallSpinner}></div>
+                  <p style={styles.loadingCommentsText}>Loading comments...</p>
+                </div>
+              ) : comments.length === 0 ? (
+                <p style={styles.noComments}>No comments yet. Be the first to share your thoughts!</p>
+              ) : (
+                comments.map((comment) => (
+                  <div key={comment.id} style={styles.comment}>
+                    <div style={styles.commentHeader}>
+                      <strong style={styles.commentUser}>{comment.userName}</strong>
+                      <span style={styles.commentTime}>
+                        {comment.timestamp?.toDate ? new Date(comment.timestamp.toDate()).toLocaleDateString() : 'Recently'}
+                      </span>
+                    </div>
+                    <p style={styles.commentText}>{comment.text}</p>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            {user ? (
+              <div style={styles.addCommentContainer}>
+                <div style={styles.commentInputContainer}>
+                  <textarea 
+                    style={styles.commentInput}
+                    value={commentText} 
+                    onChange={(e) => setCommentText(e.target.value)} 
+                    placeholder="Share your appreciation or ask a question..." 
+                    rows="2"
+                  />
+                </div>
+                <div style={styles.commentActions}>
+                  <button 
+                    style={{
+                      ...styles.postCommentButton,
+                      ...(commentText.length === 0 ? styles.postCommentButtonDisabled : {})
+                    }} 
+                    onClick={handleAddComment}
+                    disabled={commentText.length === 0}
+                  >
+                    Post Comment
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p 
+                style={styles.loginToComment} 
+                onClick={() => setShowModal(true)}
+              >
+                Login to add a comment
+              </p>
+            )}
+          </div>
+        )}
       </div>
       
       <div style={styles.cardFooter}>
@@ -261,12 +499,13 @@ const styles = {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     maxWidth: '1200px',
     margin: '0 auto',
-   
+    position: 'relative',
   },
   header: {
     textAlign: 'center',
     marginBottom: '32px',
     padding: '32px 16px 16px',
+    position: 'relative',
   },
   titleContainer: {
     position: 'relative',
@@ -296,6 +535,34 @@ const styles = {
     maxWidth: '500px',
     margin: '0 auto',
     lineHeight: '1.5',
+  },
+  authContainer: {
+    position: 'absolute',
+    top: '16px',
+    right: '16px',
+  },
+  authBelowTabs: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '32px',
+  },
+  loginButton: {
+    padding: '8px 16px',
+    backgroundColor: '#4299e1',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontWeight: '600',
+  },
+  logoutButton: {
+    padding: '8px 16px',
+    backgroundColor: '#e53e3e',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontWeight: '600',
   },
   tabContainer: {
     display: 'flex',
@@ -475,6 +742,189 @@ const styles = {
     fontSize: '14px',
     color: '#718096',
   },
+  interactionsContainer: {
+    marginTop: '16px',
+    paddingTop: '12px',
+    borderTop: '1px solid #e2e8f0',
+  },
+  actionButtons: {
+    display: 'flex',
+    justifyContent: 'space-around',
+    gap: '8px',
+  },
+  likeButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    padding: '8px 12px',
+    backgroundColor: '#f7fafc',
+    color: '#4a5568',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px',
+    transition: 'all 0.2s ease',
+    flex: 1,
+  },
+  likedButton: {
+    backgroundColor: '#ebf8ff',
+    color: '#3182ce',
+    borderColor: '#bee3f8',
+  },
+  commentButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    padding: '8px 12px',
+    backgroundColor: '#f7fafc',
+    color: '#4a5568',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px',
+    transition: 'all 0.2s ease',
+    flex: 1,
+  },
+  buttonIcon: {
+    fontSize: '16px',
+  },
+  buttonCount: {
+    fontSize: '14px',
+    fontWeight: '600',
+  },
+  commentsSection: {
+    marginTop: '16px',
+    paddingTop: '16px',
+    borderTop: '1px solid #e2e8f0',
+  },
+  commentsHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '12px',
+  },
+  commentsTitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#2d3748',
+    margin: 0,
+  },
+  closeCommentsButton: {
+    background: 'none',
+    border: 'none',
+    fontSize: '18px',
+    cursor: 'pointer',
+    color: '#718096',
+    padding: '4px',
+    borderRadius: '4px',
+    transition: 'background-color 0.2s',
+  },
+  commentsList: {
+    maxHeight: '200px',
+    overflowY: 'auto',
+    marginBottom: '16px',
+    paddingRight: '8px',
+  },
+  comment: {
+    padding: '12px',
+    backgroundColor: '#f7fafc',
+    borderRadius: '8px',
+    marginBottom: '8px',
+    border: '1px solid #edf2f7',
+  },
+  commentHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '6px',
+  },
+  commentUser: {
+    fontSize: '14px',
+    color: '#2d3748',
+  },
+  commentTime: {
+    fontSize: '12px',
+    color: '#718096',
+  },
+  commentText: {
+    fontSize: '14px',
+    color: '#4a5568',
+    margin: 0,
+    lineHeight: '1.4',
+  },
+  addCommentContainer: {
+    marginTop: '16px',
+  },
+  commentInputContainer: {
+    marginBottom: '12px',
+  },
+  commentInput: {
+    width: '100%',
+    padding: '12px',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    fontSize: '14px',
+    resize: 'vertical',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box',
+  },
+  commentActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+  },
+  postCommentButton: {
+    padding: '8px 16px',
+    backgroundColor: '#4299e1',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px',
+    transition: 'background-color 0.2s',
+  },
+  postCommentButtonDisabled: {
+    backgroundColor: '#cbd5e0',
+    cursor: 'not-allowed',
+  },
+  loginToComment: {
+    textAlign: 'center',
+    color: '#4299e1',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    fontSize: '14px',
+    marginTop: '12px',
+  },
+  loadingCommentsContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '20px',
+  },
+  smallSpinner: {
+    width: '20px',
+    height: '20px',
+    border: '2px solid #e2e8f0',
+    borderTop: '2px solid #4299e1',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+    marginBottom: '8px',
+  },
+  loadingCommentsText: {
+    fontSize: '14px',
+    color: '#718096',
+  },
+  noComments: {
+    textAlign: 'center',
+    color: '#a0aec0',
+    fontSize: '14px',
+    padding: '20px',
+    fontStyle: 'italic',
+  },
   cardFooter: {
     display: 'flex',
     justifyContent: 'center',
@@ -554,6 +1004,25 @@ const styles = {
     fontSize: '14px',
     margin: '0',
   },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    overflow: 'hidden',
+    maxWidth: '400px',
+    width: '100%',
+  },
 };
 
 // Add the animation to the document
@@ -571,50 +1040,50 @@ if (typeof document !== 'undefined') {
 const mediaQueries = `
   @media (max-width: 768px) {
     .container {
-      padding: 12px;
+      padding: '12px';
     }
     
     .header {
-      padding: 24px 12px 12px;
-      margin-bottom: 24px;
+      padding: '24px 12px 12px';
+      marginBottom: '24px';
     }
     
     .section {
-      padding: 20px 16px;
-      margin-bottom: 20px;
+      padding: '20px 16px';
+      marginBottom: '20px';
     }
     
     .list {
-      grid-template-columns: 1fr;
-      gap: 16px;
+      grid-template-columns: '1fr';
+      gap: '16px';
     }
     
     .card {
-      padding: 16px;
+      padding: '16px';
     }
     
     .tab {
-      padding: 10px 16px;
-      font-size: 13px;
-      min-width: 70px;
+      padding: '10px 16px';
+      font-size: '13px';
+      min-width: '70px';
     }
     
     .section-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
+      flex-direction: 'column';
+      align-items: 'flex-start';
+      gap: '8px';
     }
   }
   
   @media (max-width: 480px) {
     .tab-container {
-      flex-direction: column;
-      align-items: stretch;
+      flex-direction: 'column';
+      align-items: 'stretch';
     }
     
     .tab {
-      width: 100%;
-      margin-bottom: 8px;
+      width: '100%';
+      margin-bottom: '8px';
     }
   }
 `;

@@ -1,178 +1,120 @@
 import React, { useState } from 'react';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { app } from '../config/firebase';
 
-const LoginRegister = ({ onClose }) => {
-  const [isLogin, setIsLogin] = useState(true);
+const auth = getAuth(app);
+
+const LoginRegisterPage = ({ onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const auth = getAuth(app);
+  const [isRegister, setIsRegister] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
+    setError(null);
     try {
-      if (isLogin) {
-        // Login logic
-        await signInWithEmailAndPassword(auth, email, password);
-        onClose();
+      if (isRegister) {
+        await createUserWithEmailAndPassword(auth, email, password);
       } else {
-        // Register logic
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, {
-          displayName: name
-        });
-        onClose();
+        await signInWithEmailAndPassword(auth, email, password);
       }
+      onClose();
     } catch (err) {
       setError(err.message);
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>{isLogin ? 'Login' : 'Register'}</h2>
-      
-      {error && <div style={styles.error}>{error}</div>}
-      
-      <form onSubmit={handleSubmit} style={styles.form}>
-        {!isLogin && (
-          <div style={styles.inputGroup}>
-            <label htmlFor="name" style={styles.label}>Full Name</label>
-            <input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              style={styles.input}
-              placeholder="Enter your name"
-            />
-          </div>
-        )}
-        
-        <div style={styles.inputGroup}>
-          <label htmlFor="email" style={styles.label}>Email</label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={styles.input}
-            placeholder="Enter your email"
-          />
-        </div>
-        
-        <div style={styles.inputGroup}>
-          <label htmlFor="password" style={styles.label}>Password</label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={styles.input}
-            placeholder="Enter your password"
-          />
-        </div>
-        
-        <button 
-          type="submit" 
-          style={styles.submitButton}
-          disabled={loading}
-        >
-          {loading ? 'Processing...' : isLogin ? 'Login' : 'Register'}
+    <div style={loginStyles.container}>
+      <button style={loginStyles.closeButton} onClick={onClose}>×</button>
+      <h2 style={loginStyles.title}>{isRegister ? 'Register' : 'Login'}</h2>
+      <form onSubmit={handleSubmit} style={loginStyles.form}>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          style={loginStyles.input}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          style={loginStyles.input}
+        />
+        <button type="submit" style={loginStyles.submitButton}>
+          {isRegister ? 'Register' : 'Login'}
         </button>
       </form>
-      
-      <div style={styles.switchContainer}>
-        <p style={styles.switchText}>
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <button 
-            type="button" 
-            style={styles.switchButton}
-            onClick={() => setIsLogin(!isLogin)}
-          >
-            {isLogin ? 'Register' : 'Login'}
-          </button>
-        </p>
-      </div>
+      <p style={loginStyles.toggleText} onClick={() => setIsRegister(!isRegister)}>
+        {isRegister ? 'Already have an account? Login' : "Don't have an account? Register"}
+      </p>
+      {error && <p style={loginStyles.errorText}>{error}</p>}
     </div>
   );
 };
 
-const styles = {
+const loginStyles = {
   container: {
+    position: 'relative',
     width: '100%',
     maxWidth: '400px',
-    padding: '20px',
+    padding: '32px',
+    background: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: '16px',
+    right: '16px',
+    background: 'none',
+    border: 'none',
+    fontSize: '24px',
+    cursor: 'pointer',
+    color: '#718096',
   },
   title: {
     textAlign: 'center',
-    marginBottom: '20px',
+    marginBottom: '24px',
     color: '#2d3748',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-  },
-  inputGroup: {
-    marginBottom: '15px',
-  },
-  label: {
-    display: 'block',
-    marginBottom: '5px',
-    fontWeight: '500',
-    color: '#4a5568',
+    gap: '16px',
   },
   input: {
-    width: '100%',
-    padding: '10px',
-    border: '1px solid #cbd5e0',
+    padding: '12px',
+    border: '1px solid #e2e8f0',
     borderRadius: '4px',
     fontSize: '16px',
   },
   submitButton: {
     padding: '12px',
-    backgroundColor: '#4299e1',
+    background: '#2d3748',
     color: 'white',
     border: 'none',
     borderRadius: '4px',
-    fontSize: '16px',
     cursor: 'pointer',
-    marginTop: '10px',
+    fontWeight: '600',
   },
-  switchContainer: {
+  toggleText: {
     textAlign: 'center',
-    marginTop: '20px',
-  },
-  switchText: {
-    color: '#718096',
-  },
-  switchButton: {
-    background: 'none',
-    border: 'none',
     color: '#4299e1',
     cursor: 'pointer',
-    textDecoration: 'underline',
+    marginTop: '16px',
   },
-  error: {
+  errorText: {
     color: '#e53e3e',
-    padding: '10px',
-    backgroundColor: '#fed7d7',
-    borderRadius: '4px',
-    marginBottom: '15px',
     textAlign: 'center',
+    marginTop: '16px',
   },
 };
 
-export default LoginRegister;
+export default LoginRegisterPage;
